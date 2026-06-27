@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Family Heads Up</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main class="app-container">
+    
+    <!-- LOBBY VIEW -->
+    <section id="view-lobby" class="view active">
+      <header class="app-header">
+        <h1>Heads Up!</h1>
+        <p class="subtitle">Family Edition</p>
+      </header>
+
+      <div class="category-container">
+        <label for="categorySelect">Select a Category:</label>
+        <select id="categorySelect" class="styled-select">
+          <option value="family_jokes">👨‍👩‍👧‍👦 Family Inside Jokes</option>
+          <option value="movies">🍿 Movie Night</option>
+          <option value="animals">🦁 Silly Animals</option>
+          <!-- Eventually we will populate this dynamically from Firebase -->
+        </select>
+      </div>
+
+      <footer class="app-footer">
+        <button id="startGameBtn" class="primary-btn">Start Game (60s)</button>
+      </footer>
+    </section>
+
+    <!-- STAGE VIEW -->
+    <section id="view-stage" class="view">
+      <header class="stage-header">
+        <span id="stageCategoryTitle" class="badge">Category</span>
+        <div id="scoreDisplay" class="score-badge">Score: <span id="scoreValue">0</span></div>
+      </header>
+
+      <div class="card-stage">
+        <div class="flashcard">
+          <div class="card-content" id="cardContent">
+            <h2 class="game-word">Place on forehead to start!</h2>
+          </div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+      </div>
+
+      <footer class="app-footer">
+        <div id="controlsPreStart" class="control-group">
+          <!-- This will eventually be replaced by the tilt logic -->
+          <button id="startTimerBtn" class="primary-btn">Tap to Begin</button>
+        </div>
+
+        <div id="controlsActive" class="control-group game-controls hidden">
+          <button id="skipBtn" class="action-btn skip-btn">Pass</button>
+          <button id="correctBtn" class="action-btn correct-btn">Correct!</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- RECAP VIEW -->
+    <section id="view-recap" class="view">
+      <div class="recap-stage">
+        <div class="recap-box">
+          <h2>⏰ Time's Up!</h2>
+          <div class="recap-score">
+            <p>Final Score</p>
+            <span id="recapScoreValue">0</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="app-footer">
+        <button id="playAgainBtn" class="primary-btn">Play Again</button>
+        <button id="changeModeBtn" class="secondary-btn" style="background: var(--text-muted); box-shadow: 0 5px 0px #6C757D;">Change Category</button>
+      </footer>
+    </section>
+
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
