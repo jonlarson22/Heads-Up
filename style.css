@@ -1,0 +1,257 @@
+:root {
+  --primary: #8338EC; /* Amethyst Purple */
+  --secondary: #FFBE0B; /* Sunny Yellow */
+  --accent: #FF006E; /* Pop Pink */
+  --bg-color: #F0F4F8; /* Soft blue-grey */
+  --card-bg: #FFFFFF;
+  --text-main: #2B2D42;
+  --text-muted: #8D99AE;
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-button: 0 5px 0px #5F25B0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 650px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- VIEW ROUTER UTILITY --- */
+.view {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 16px 20px;
+}
+.view.active { display: flex; }
+.hidden { display: none !important; }
+
+/* --- HEADERS --- */
+.app-header {
+  text-align: center;
+  padding: 20px 0;
+}
+.app-header h1 {
+  font-size: 2.8rem;
+  color: var(--primary);
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.subtitle {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* --- CATEGORY DROPDOWN --- */
+.category-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+}
+
+.category-container label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.styled-select {
+  width: 100%;
+  padding: 18px 20px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  background-color: white;
+  border: 4px solid var(--primary);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238338EC' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.5em;
+  cursor: pointer;
+}
+
+.styled-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* --- STAGE HEADER --- */
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px 12px;
+  min-height: 40px;
+}
+.badge {
+  background: var(--secondary);
+  color: #8C6600;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.score-badge {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+.score-badge span {
+  color: var(--primary);
+  font-size: 1.6rem;
+  margin-left: 6px;
+}
+
+/* --- CARD STAGE --- */
+.card-stage {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+}
+.flashcard {
+  width: 100%;
+  height: 100%;
+  background: var(--card-bg);
+  border-radius: 28px;
+  border: 6px solid white;
+  box-shadow: 0 12px 30px rgba(131, 56, 236, 0.15);
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+.game-word {
+  /* Massive text for Heads Up layout */
+  font-size: clamp(3rem, 12vw, 5rem);
+  font-weight: 900;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.1;
+  padding: 0 10px;
+}
+
+/* --- PROGRESS BAR --- */
+.progress-container {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--secondary);
+  transition: width 1s linear, background-color 0.3s ease;
+}
+.progress-bar.warning {
+  background: var(--accent);
+}
+
+/* --- BUTTONS & FOOTERS --- */
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}
+.primary-btn, .secondary-btn, .action-btn {
+  width: 100%;
+  padding: 18px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.primary-btn {
+  background-color: var(--primary);
+  box-shadow: var(--shadow-button);
+}
+.game-controls {
+  display: flex;
+  gap: 12px;
+}
+.correct-btn {
+  background-color: #06D6A0;
+  box-shadow: 0 5px 0px #04A67B;
+}
+.skip-btn {
+  background-color: var(--accent);
+  box-shadow: 0 5px 0px #C80055;
+}
+.primary-btn:active, .action-btn:active {
+  transform: translateY(4px);
+  box-shadow: none !important;
+}
+
+/* --- RECAP VIEW --- */
+.recap-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.recap-box {
+  background: white;
+  padding: 40px 30px;
+  border-radius: 28px;
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  width: 100%;
+}
+.recap-box h2 {
+  font-size: 2.5rem;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  font-weight: 900;
+}
+.recap-score p {
+  color: var(--text-muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.recap-score span {
+  font-size: 5rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+}
