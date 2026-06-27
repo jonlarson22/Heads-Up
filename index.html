@@ -4,84 +4,158 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Family Heads Up</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Base Mobile Styles */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Screen Containers - Hiding inactive screens */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .active-screen {
+      display: block;
+    }
+
+    /* Form Elements & Buttons */
+    select, input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+      background-color: white;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background-color: #007bff;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .btn-secondary {
+      background-color: #6c757d;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Leaderboard Styles */
+    .leaderboard-filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .score-card {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .score-card .player-info {
+      text-align: left;
+    }
+    .score-card .points {
+      font-size: 24px;
+      font-weight: bold;
+      color: #28a745;
+    }
+  </style>
 </head>
 <body>
 
-  <main class="app-container">
+  <!-- SCREEN 1: THE LOBBY -->
+  <div id="lobbyScreen" class="screen active-screen">
+    <h1>Family Heads Up</h1>
     
-    <!-- LOBBY VIEW -->
-    <section id="view-lobby" class="view active">
-      <header class="app-header">
-        <h1>Heads Up!</h1>
-        <p class="subtitle">Family Edition</p>
-      </header>
+    <!-- Player Selection -->
+    <h3>Who is playing?</h3>
+    <select id="playerSelect">
+      <option value="" disabled selected>Select a player...</option>
+      <!-- You will populate this via JavaScript, but here are some hardcoded examples -->
+      <option value="Jonathan">Jonathan</option>
+      <option value="Mom">Mom</option>
+      <option value="Sarah">Sarah</option>
+      <option value="Dave">Dave</option>
+      <option value="GUEST">➕ Guest (Type Name)...</option>
+    </select>
 
-      <div class="category-container">
-        <label for="categorySelect">Select a Category:</label>
-        <select id="categorySelect" class="styled-select">
-          <option value="family_jokes">👨‍👩‍👧‍👦 Family Inside Jokes</option>
-          <option value="movies">🍿 Movie Night</option>
-          <option value="animals">🦁 Silly Animals</option>
-          <!-- Eventually we will populate this dynamically from Firebase -->
-        </select>
+    <!-- Hidden input that only shows if "GUEST" is selected -->
+    <input type="text" id="guestNameInput" class="hidden" placeholder="Enter guest name...">
+
+    <!-- Category Selection -->
+    <h3>Choose a Category</h3>
+    <select id="categorySelect">
+      <option value="movies">🍿 Movies</option>
+      <option value="family_jokes">👨‍👩‍👧‍👦 Inside Jokes</option>
+      <option value="animals">🦁 Animals</option>
+    </select>
+
+    <button class="btn" id="startBtn">START GAME</button>
+    <button class="btn btn-secondary" id="viewLeaderboardBtn">View Leaderboard</button>
+  </div>
+
+
+  <!-- SCREEN 4: THE LEADERBOARD -->
+  <!-- (Skipping Stage and Recap screens for now to focus on your request) -->
+  <div id="leaderboardScreen" class="screen">
+    <h1>High Scores</h1>
+    
+    <div class="leaderboard-filters">
+      <select id="filterCategory">
+        <option value="ALL">All Categories</option>
+        <option value="movies">Movies</option>
+        <option value="family_jokes">Inside Jokes</option>
+      </select>
+    </div>
+
+    <div id="leaderboardList">
+      <!-- Example of what JS will generate from Firebase data -->
+      <div class="score-card">
+        <div class="player-info">
+          <strong>Jonathan</strong><br>
+          <small>Movies (1 Pass)</small>
+        </div>
+        <div class="points">12</div>
       </div>
 
-      <footer class="app-footer">
-        <button id="startGameBtn" class="primary-btn">Start Game (60s)</button>
-      </footer>
-    </section>
-
-    <!-- STAGE VIEW -->
-    <section id="view-stage" class="view">
-      <header class="stage-header">
-        <span id="stageCategoryTitle" class="badge">Category</span>
-        <div id="scoreDisplay" class="score-badge">Score: <span id="scoreValue">0</span></div>
-      </header>
-
-      <div class="card-stage">
-        <div class="flashcard">
-          <div class="card-content" id="cardContent">
-            <h2 class="game-word">Place on forehead to start!</h2>
-          </div>
+      <div class="score-card">
+        <div class="player-info">
+          <strong>Mom</strong><br>
+          <small>Inside Jokes (0 Passes)</small>
         </div>
-        <div class="progress-container">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
+        <div class="points">10</div>
       </div>
+    </div>
 
-      <footer class="app-footer">
-        <div id="controlsPreStart" class="control-group">
-          <!-- This will eventually be replaced by the tilt logic -->
-          <button id="startTimerBtn" class="primary-btn">Tap to Begin</button>
-        </div>
+    <button class="btn btn-secondary" id="backToLobbyBtn">Back to Menu</button>
+  </div>
 
-        <div id="controlsActive" class="control-group game-controls hidden">
-          <button id="skipBtn" class="action-btn skip-btn">Pass</button>
-          <button id="correctBtn" class="action-btn correct-btn">Correct!</button>
-        </div>
-      </footer>
-    </section>
-
-    <!-- RECAP VIEW -->
-    <section id="view-recap" class="view">
-      <div class="recap-stage">
-        <div class="recap-box">
-          <h2>⏰ Time's Up!</h2>
-          <div class="recap-score">
-            <p>Final Score</p>
-            <span id="recapScoreValue">0</span>
-          </div>
-        </div>
-      </div>
-
-      <footer class="app-footer">
-        <button id="playAgainBtn" class="primary-btn">Play Again</button>
-        <button id="changeModeBtn" class="secondary-btn" style="background: var(--text-muted); box-shadow: 0 5px 0px #6C757D;">Change Category</button>
-      </footer>
-    </section>
-
-  </main>
-  <script src="app.js"></script>
 </body>
 </html>
