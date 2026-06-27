@@ -19,6 +19,17 @@ let currentScore = 0;
 let currentPasses = 0; 
 let timerInterval = null;
 
+// Audio Objects
+const beepSound = new Audio('sounds/countdown_beep.mp3');
+const finalBuzzer = new Audio('sounds/final_buzzer.mp3');
+const startBuzzer = new Audio('sounds/start_buzzer.mp3');
+
+// Helper to reliably play sound (resetting to start each time)
+function playSound(soundObj) {
+  soundObj.currentTime = 0;
+  soundObj.play().catch(e => console.log('Audio blocked by browser:', e));
+}
+
 // ==========================================
 // 2. DOM ELEMENT DECLARATIONS
 // ==========================================
@@ -105,7 +116,7 @@ function drawNextCard() {
 }
 
 // ==========================================
-// 6. GAME STAGE LIFECYCLE
+// 6. GAME STAGE LIFECYCLE (WITH AUDIO)
 // ==========================================
 function initStage() {
   const playerName = getActivePlayerName();
@@ -136,10 +147,36 @@ function initStage() {
   setView('stage');
 }
 
-function startActiveTimer() {
+// NEW: Pre-game flashing countdown
+function startPreGameCountdown() {
   controlsPreStart.classList.add('hidden');
-  controlsActive.classList.remove('hidden');
+  let count = 3;
 
+  // Immediately draw the 3 and beep
+  cardContent.innerHTML = `<h2 class="game-word countdown-text">${count}</h2>`;
+  playSound(beepSound);
+  count--;
+
+  const countdownInterval = setInterval(() => {
+    if (count > 0) {
+      cardContent.innerHTML = `<h2 class="game-word countdown-text">${count}</h2>`;
+      playSound(beepSound);
+      count--;
+    } else {
+      clearInterval(countdownInterval);
+      cardContent.innerHTML = `<h2 class="game-word countdown-text" style="color: #06D6A0;">GO!</h2>`;
+      playSound(startBuzzer);
+      
+      // Short delay before showing first word and starting timer
+      setTimeout(() => {
+        startActiveTimer();
+      }, 800); 
+    }
+  }, 1000);
+}
+
+function startActiveTimer() {
+  controlsActive.classList.remove('hidden');
   drawNextCard();
   timeLeft = ROUND_DURATION;
 
@@ -148,9 +185,16 @@ function startActiveTimer() {
     const pct = (timeLeft / ROUND_DURATION) * 100;
     progressBar.style.width = `${pct}%`;
 
+    // Turn bar pink/warning in last 15 seconds (25%)
     if (pct <= 25) progressBar.classList.add('warning');
 
+    // Beep for the final 5 seconds
+    if (timeLeft <= 5 && timeLeft > 0) {
+      playSound(beepSound);
+    }
+
     if (timeLeft <= 0) {
+      playSound(finalBuzzer);
       triggerRecap();
     }
   }, 1000);
@@ -163,32 +207,36 @@ function triggerRecap() {
   recapScoreValue.textContent = currentScore;
   recapPassStats.textContent = `${currentScore} Correct • ${currentPasses} Passes`;
 
-  // Mock Firebase Push Trigger
+  // Push score to local storage mock array
   saveScoreRecord({
     player: currentPlayerName,
     score: currentScore,
     passes: currentPasses,
     category: currentCategory,
-    date: new Date().toLocaleDateString()
+    catName: currentCategoryName 
   });
 
   setView('recap');
 }
 
-function saveScoreRecord(record) {
-  console.log("Saving record (Offline/Firebase):", record);
-  // TODO: Push to Firebase or LocalStorage Queue
-}
-
 // ==========================================
-// 7. LEADERBOARD ENGINE (MOCK)
+// 7. LEADERBOARD ENGINE (LOCALSTORAGE MOCK)
 // ==========================================
-const MOCK_LEADERBOARD = [
+// Check if we have saved scores, otherwise load some defaults
+let LOCAL_LEADERBOARD = JSON.parse(localStorage.getItem('headsUpScores')) || [
   { player: "Mom", score: 14, passes: 1, category: "family_jokes", catName: "Inside Jokes" },
-  { player: "Jonathan", score: 12, passes: 3, category: "movies", catName: "Movie Night" },
-  { player: "Sarah", score: 9, passes: 0, category: "animals", catName: "Silly Animals" },
-  { player: "Dave", score: 8, passes: 5, category: "family_jokes", catName: "Inside Jokes" }
+  { player: "Jonathan", score: 12, passes: 3, category: "movies", catName: "Movie Night" }
 ];
+
+function saveScoreRecord(record) {
+  LOCAL_LEADERBOARD.push(record);
+  
+  // Sort list so highest score is always at the top
+  LOCAL_LEADERBOARD.sort((a, b) => b.score - a.score);
+  
+  // Save back to the browser's local memory
+  localStorage.setItem('headsUpScores', JSON.stringify(LOCAL_LEADERBOARD));
+}
 
 function renderLeaderboard() {
   setView('leaderboard');
@@ -200,8 +248,8 @@ function filterLeaderboardList() {
   leaderboardList.innerHTML = '';
 
   const filtered = selectedCat === 'ALL' 
-    ? MOCK_LEADERBOARD 
-    : MOCK_LEADERBOARD.filter(item => item.category === selectedCat);
+    ? LOCAL_LEADERBOARD 
+    : LOCAL_LEADERBOARD.filter(item => item.category === selectedCat);
 
   if (filtered.length === 0) {
     leaderboardList.innerHTML = `<p style="color: var(--text-muted); margin-top: 40px;">No scores logged for this category yet!</p>`;
@@ -226,7 +274,9 @@ function filterLeaderboardList() {
 // 8. EVENT LISTENERS
 // ==========================================
 startBtn.addEventListener('click', initStage);
-startTimerBtn.addEventListener('click', startActiveTimer);
+
+// CHANGED: This button now triggers the countdown, not the timer directly
+startTimerBtn.addEventListener('click', startPreGameCountdown);
 
 skipBtn.addEventListener('click', () => {
   currentPasses++;
