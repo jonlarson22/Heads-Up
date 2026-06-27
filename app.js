@@ -10,46 +10,73 @@ const FALLBACK_DATA = {
 
 let gameData = FALLBACK_DATA; 
 let shuffledBag = [];
-let currentCategory = 'family_jokes';
-let currentCategoryName = 'Family Inside Jokes';
+let currentCategory = 'movies';
+let currentCategoryName = 'Movies';
+let currentPlayerName = ''; // NEW: Track who is playing
 
 const ROUND_DURATION = 60;
 let timeLeft = 60;
 let currentScore = 0;
+let currentPasses = 0; // NEW: Track passes for accuracy stats
 let timerInterval = null;
 
 // ==========================================
 // 2. DOM ELEMENT DECLARATIONS
 // ==========================================
-const views = document.querySelectorAll('.view');
+const screens = document.querySelectorAll('.screen');
+
+// Lobby Elements
+const playerSelect = document.getElementById('playerSelect');
+const guestNameInput = document.getElementById('guestNameInput');
 const categorySelect = document.getElementById('categorySelect');
-const startGameBtn = document.getElementById('startGameBtn');
+const startBtn = document.getElementById('startBtn');
+const viewLeaderboardBtn = document.getElementById('viewLeaderboardBtn');
 
-const stageCategoryTitle = document.getElementById('stageCategoryTitle');
-const scoreValue = document.getElementById('scoreValue');
-const cardContent = document.getElementById('cardContent');
-const progressBar = document.getElementById('progressBar');
+// Leaderboard Elements
+const leaderboardScreen = document.getElementById('leaderboardScreen');
+const filterCategory = document.getElementById('filterCategory');
+const leaderboardList = document.getElementById('leaderboardList');
+const backToLobbyBtn = document.getElementById('backToLobbyBtn');
 
-const controlsPreStart = document.getElementById('controlsPreStart');
-const controlsActive = document.getElementById('controlsActive');
-const startTimerBtn = document.getElementById('startTimerBtn');
-const skipBtn = document.getElementById('skipBtn');
-const correctBtn = document.getElementById('correctBtn');
-
-const recapScoreValue = document.getElementById('recapScoreValue');
-const playAgainBtn = document.getElementById('playAgainBtn');
-const changeModeBtn = document.getElementById('changeModeBtn');
+// Note: Stage and Recap DOM elements will be re-connected once we 
+// paste their HTML back into index.html!
 
 // ==========================================
 // 3. CORE ROUTER ENGINE
 // ==========================================
-function setView(viewId) {
-  views.forEach(v => v.classList.remove('active'));
-  document.getElementById(`view-${viewId}`).classList.add('active');
+function showScreen(screenId) {
+  screens.forEach(s => s.classList.remove('active-screen'));
+  const targetScreen = document.getElementById(screenId);
+  if (targetScreen) {
+    targetScreen.classList.add('active-screen');
+  }
 }
 
 // ==========================================
-// 4. DATA & SHUFFLE BAG LOGIC
+// 4. PLAYER & GUEST SELECTION LOGIC
+// ==========================================
+playerSelect.addEventListener('change', (e) => {
+  if (e.target.value === 'GUEST') {
+    guestNameInput.classList.remove('hidden');
+    guestNameInput.focus();
+  } else {
+    guestNameInput.classList.add('hidden');
+  }
+});
+
+function getActivePlayerName() {
+  const selected = playerSelect.value;
+  if (!selected) return null;
+  
+  if (selected === 'GUEST') {
+    const customName = guestNameInput.value.trim();
+    return customName.length > 0 ? customName : "Mystery Guest";
+  }
+  return selected;
+}
+
+// ==========================================
+// 5. DATA & SHUFFLE BAG LOGIC
 // ==========================================
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -60,83 +87,57 @@ function shuffleArray(array) {
 
 function drawNextCard() {
   if (shuffledBag.length === 0) {
-    // Reload and reshuffle the bag if we run out of words
     shuffledBag = [...gameData[currentCategory]];
     shuffleArray(shuffledBag);
   }
   const nextWord = shuffledBag.pop();
   
-  cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
+  // Assuming cardContent element exists on Stage screen
+  const cardContent = document.getElementById('cardContent');
+  if (cardContent) {
+    cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
+  }
 }
 
 // ==========================================
-// 5. VIEW HANDLERS & TIMER ENGINE
+// 6. GAMEFLOW & VIEW HANDLERS
 // ==========================================
-function initStage() {
+function handleStartClick() {
+  const playerName = getActivePlayerName();
+  if (!playerName) {
+    alert("Please select who is playing first!");
+    return;
+  }
+
+  currentPlayerName = playerName;
   currentCategory = categorySelect.value;
   currentCategoryName = categorySelect.options[categorySelect.selectedIndex].text;
   
-  stageCategoryTitle.textContent = currentCategoryName;
-  shuffledBag = []; // Reset bag for the new category
-  
-  clearInterval(timerInterval);
-  progressBar.style.width = '100%';
-  progressBar.classList.remove('warning');
+  // Save last played user to auto-select next time
+  localStorage.setItem('last_player', playerSelect.value);
 
-  currentScore = 0;
-  scoreValue.textContent = '0';
-  
-  // Show prompt instead of first word
-  cardContent.innerHTML = `<h2 class="game-word">Place on forehead to start!</h2>`;
-
-  controlsPreStart.classList.remove('hidden');
-  controlsActive.classList.add('hidden');
-
-  setView('stage');
+  // Transition to Stage Screen (Placeholder until Stage HTML is added)
+  console.log(`Starting game for ${currentPlayerName} in category: ${currentCategoryName}`);
+  // initStage(); 
 }
 
-function startActiveTimer() {
-  controlsPreStart.classList.add('hidden');
-  controlsActive.classList.remove('hidden');
-
-  drawNextCard(); // Pull the first actual word
-  
-  timeLeft = ROUND_DURATION;
-  
-  // Note: If you want to add device motion (tilt) permissions,
-  // this click event is exactly where you must request it for iOS.
-
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    const pct = (timeLeft / ROUND_DURATION) * 100;
-    progressBar.style.width = `${pct}%`;
-
-    if (pct <= 25) progressBar.classList.add('warning');
-
-    if (timeLeft <= 0) {
-      triggerRecap();
-    }
-  }, 1000);
-}
-
-function triggerRecap() {
-  clearInterval(timerInterval);
-  recapScoreValue.textContent = currentScore;
-  setView('recap');
+function renderLeaderboard() {
+  showScreen('leaderboardScreen');
+  // TODO: Fetch data from Firebase and render into #leaderboardList
 }
 
 // ==========================================
-// 6. EVENT LISTENERS
+// 7. EVENT LISTENERS & INIT
 // ==========================================
-startGameBtn.addEventListener('click', initStage);
-startTimerBtn.addEventListener('click', startActiveTimer);
+startBtn.addEventListener('click', handleStartClick);
+viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
+backToLobbyBtn.addEventListener('click', () => showScreen('lobbyScreen'));
 
-skipBtn.addEventListener('click', drawNextCard);
-correctBtn.addEventListener('click', () => {
-  currentScore++;
-  scoreValue.textContent = currentScore;
-  drawNextCard();
+window.addEventListener('DOMContentLoaded', () => {
+  // Auto-select the last person who played
+  const lastPlayer = localStorage.getItem('last_player');
+  if (lastPlayer) {
+    playerSelect.value = lastPlayer;
+    if (lastPlayer === 'GUEST') guestNameInput.classList.remove('hidden');
+  }
 });
-
-playAgainBtn.addEventListener('click', initStage);
-changeModeBtn.addEventListener('click', () => setView('lobby'));
