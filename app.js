@@ -1,59 +1,70 @@
 // ==========================================
 // 1. GAME DEFINITIONS & STATE
 // ==========================================
-// Hardcoded fallback data - later we will pull this from Firebase/JSON
 const FALLBACK_DATA = {
-  family_jokes: ["Dad's Sneezing", "The Dog's Breath", "Camping 2025", "Mom's Cooking"],
-  movies: ["Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park"],
-  animals: ["Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin"]
+  family_jokes: ["Dad's Sneezing", "The Dog's Breath", "Camping 2025", "Mom's Cooking", "Burnt Toast", "Roadtrip Songs"],
+  movies: ["Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park", "Shrek", "Moana"],
+  animals: ["Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin", "Kangaroo", "Cheetah"]
 };
 
 let gameData = FALLBACK_DATA; 
 let shuffledBag = [];
-let currentCategory = 'movies';
-let currentCategoryName = 'Movies';
-let currentPlayerName = ''; // NEW: Track who is playing
+let currentCategory = 'family_jokes';
+let currentCategoryName = 'Inside Jokes';
+let currentPlayerName = ''; 
 
 const ROUND_DURATION = 60;
 let timeLeft = 60;
 let currentScore = 0;
-let currentPasses = 0; // NEW: Track passes for accuracy stats
+let currentPasses = 0; 
 let timerInterval = null;
 
 // ==========================================
 // 2. DOM ELEMENT DECLARATIONS
 // ==========================================
-const screens = document.querySelectorAll('.screen');
+const views = document.querySelectorAll('.view');
 
-// Lobby Elements
+// Lobby DOM
 const playerSelect = document.getElementById('playerSelect');
 const guestNameInput = document.getElementById('guestNameInput');
 const categorySelect = document.getElementById('categorySelect');
 const startBtn = document.getElementById('startBtn');
 const viewLeaderboardBtn = document.getElementById('viewLeaderboardBtn');
 
-// Leaderboard Elements
-const leaderboardScreen = document.getElementById('leaderboardScreen');
+// Stage DOM
+const stageCategoryTitle = document.getElementById('stageCategoryTitle');
+const scoreValue = document.getElementById('scoreValue');
+const cardContent = document.getElementById('cardContent');
+const progressBar = document.getElementById('progressBar');
+const controlsPreStart = document.getElementById('controlsPreStart');
+const controlsActive = document.getElementById('controlsActive');
+const startTimerBtn = document.getElementById('startTimerBtn');
+const skipBtn = document.getElementById('skipBtn');
+const correctBtn = document.getElementById('correctBtn');
+
+// Recap DOM
+const recapPlayerName = document.getElementById('recapPlayerName');
+const recapScoreValue = document.getElementById('recapScoreValue');
+const recapPassStats = document.getElementById('recapPassStats');
+const playAgainBtn = document.getElementById('playAgainBtn');
+const changeModeBtn = document.getElementById('changeModeBtn');
+
+// Leaderboard DOM
 const filterCategory = document.getElementById('filterCategory');
 const leaderboardList = document.getElementById('leaderboardList');
 const backToLobbyBtn = document.getElementById('backToLobbyBtn');
 
-// Note: Stage and Recap DOM elements will be re-connected once we 
-// paste their HTML back into index.html!
-
 // ==========================================
 // 3. CORE ROUTER ENGINE
 // ==========================================
-function showScreen(screenId) {
-  screens.forEach(s => s.classList.remove('active-screen'));
-  const targetScreen = document.getElementById(screenId);
-  if (targetScreen) {
-    targetScreen.classList.add('active-screen');
-  }
+function setView(viewId) {
+  views.forEach(v => v.classList.remove('active'));
+  const target = document.getElementById(`view-${viewId}`);
+  if (target) target.classList.add('active');
 }
 
 // ==========================================
-// 4. PLAYER & GUEST SELECTION LOGIC
+// 4. PLAYER SELECTION HELPERS
 // ==========================================
 playerSelect.addEventListener('change', (e) => {
   if (e.target.value === 'GUEST') {
@@ -67,16 +78,15 @@ playerSelect.addEventListener('change', (e) => {
 function getActivePlayerName() {
   const selected = playerSelect.value;
   if (!selected) return null;
-  
   if (selected === 'GUEST') {
-    const customName = guestNameInput.value.trim();
-    return customName.length > 0 ? customName : "Mystery Guest";
+    const custom = guestNameInput.value.trim();
+    return custom.length > 0 ? custom : "Mystery Guest";
   }
   return selected;
 }
 
 // ==========================================
-// 5. DATA & SHUFFLE BAG LOGIC
+// 5. SHUFFLE & CARD ENGINE
 // ==========================================
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -91,18 +101,13 @@ function drawNextCard() {
     shuffleArray(shuffledBag);
   }
   const nextWord = shuffledBag.pop();
-  
-  // Assuming cardContent element exists on Stage screen
-  const cardContent = document.getElementById('cardContent');
-  if (cardContent) {
-    cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
-  }
+  cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
 }
 
 // ==========================================
-// 6. GAMEFLOW & VIEW HANDLERS
+// 6. GAME STAGE LIFECYCLE
 // ==========================================
-function handleStartClick() {
+function initStage() {
   const playerName = getActivePlayerName();
   if (!playerName) {
     alert("Please select who is playing first!");
@@ -112,29 +117,136 @@ function handleStartClick() {
   currentPlayerName = playerName;
   currentCategory = categorySelect.value;
   currentCategoryName = categorySelect.options[categorySelect.selectedIndex].text;
-  
-  // Save last played user to auto-select next time
   localStorage.setItem('last_player', playerSelect.value);
 
-  // Transition to Stage Screen (Placeholder until Stage HTML is added)
-  console.log(`Starting game for ${currentPlayerName} in category: ${currentCategoryName}`);
-  // initStage(); 
+  stageCategoryTitle.textContent = currentCategoryName;
+  shuffledBag = [];
+  clearInterval(timerInterval);
+  
+  progressBar.style.width = '100%';
+  progressBar.classList.remove('warning');
+  currentScore = 0;
+  currentPasses = 0;
+  scoreValue.textContent = '0';
+  
+  cardContent.innerHTML = `<h2 class="game-word">Place on forehead to start!</h2>`;
+  controlsPreStart.classList.remove('hidden');
+  controlsActive.classList.add('hidden');
+
+  setView('stage');
 }
+
+function startActiveTimer() {
+  controlsPreStart.classList.add('hidden');
+  controlsActive.classList.remove('hidden');
+
+  drawNextCard();
+  timeLeft = ROUND_DURATION;
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    const pct = (timeLeft / ROUND_DURATION) * 100;
+    progressBar.style.width = `${pct}%`;
+
+    if (pct <= 25) progressBar.classList.add('warning');
+
+    if (timeLeft <= 0) {
+      triggerRecap();
+    }
+  }, 1000);
+}
+
+function triggerRecap() {
+  clearInterval(timerInterval);
+  
+  recapPlayerName.textContent = `${currentPlayerName}'s Round`;
+  recapScoreValue.textContent = currentScore;
+  recapPassStats.textContent = `${currentScore} Correct • ${currentPasses} Passes`;
+
+  // Mock Firebase Push Trigger
+  saveScoreRecord({
+    player: currentPlayerName,
+    score: currentScore,
+    passes: currentPasses,
+    category: currentCategory,
+    date: new Date().toLocaleDateString()
+  });
+
+  setView('recap');
+}
+
+function saveScoreRecord(record) {
+  console.log("Saving record (Offline/Firebase):", record);
+  // TODO: Push to Firebase or LocalStorage Queue
+}
+
+// ==========================================
+// 7. LEADERBOARD ENGINE (MOCK)
+// ==========================================
+const MOCK_LEADERBOARD = [
+  { player: "Mom", score: 14, passes: 1, category: "family_jokes", catName: "Inside Jokes" },
+  { player: "Jonathan", score: 12, passes: 3, category: "movies", catName: "Movie Night" },
+  { player: "Sarah", score: 9, passes: 0, category: "animals", catName: "Silly Animals" },
+  { player: "Dave", score: 8, passes: 5, category: "family_jokes", catName: "Inside Jokes" }
+];
 
 function renderLeaderboard() {
-  showScreen('leaderboardScreen');
-  // TODO: Fetch data from Firebase and render into #leaderboardList
+  setView('leaderboard');
+  filterLeaderboardList();
+}
+
+function filterLeaderboardList() {
+  const selectedCat = filterCategory.value;
+  leaderboardList.innerHTML = '';
+
+  const filtered = selectedCat === 'ALL' 
+    ? MOCK_LEADERBOARD 
+    : MOCK_LEADERBOARD.filter(item => item.category === selectedCat);
+
+  if (filtered.length === 0) {
+    leaderboardList.innerHTML = `<p style="color: var(--text-muted); margin-top: 40px;">No scores logged for this category yet!</p>`;
+    return;
+  }
+
+  filtered.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'score-card';
+    card.innerHTML = `
+      <div class="player-info">
+        <strong>${entry.player}</strong><br>
+        <small>${entry.catName} (${entry.passes} Passes)</small>
+      </div>
+      <div class="points">${entry.score}</div>
+    `;
+    leaderboardList.appendChild(card);
+  });
 }
 
 // ==========================================
-// 7. EVENT LISTENERS & INIT
+// 8. EVENT LISTENERS
 // ==========================================
-startBtn.addEventListener('click', handleStartClick);
+startBtn.addEventListener('click', initStage);
+startTimerBtn.addEventListener('click', startActiveTimer);
+
+skipBtn.addEventListener('click', () => {
+  currentPasses++;
+  drawNextCard();
+});
+
+correctBtn.addEventListener('click', () => {
+  currentScore++;
+  scoreValue.textContent = currentScore;
+  drawNextCard();
+});
+
+playAgainBtn.addEventListener('click', initStage);
+changeModeBtn.addEventListener('click', () => setView('lobby'));
+
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
-backToLobbyBtn.addEventListener('click', () => showScreen('lobbyScreen'));
+backToLobbyBtn.addEventListener('click', () => setView('lobby'));
+filterCategory.addEventListener('change', filterLeaderboardList);
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Auto-select the last person who played
   const lastPlayer = localStorage.getItem('last_player');
   if (lastPlayer) {
     playerSelect.value = lastPlayer;
