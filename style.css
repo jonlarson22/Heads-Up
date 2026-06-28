@@ -45,7 +45,7 @@ body {
 .app-header h1 { font-size: 2.8rem; color: var(--primary); font-weight: 900; letter-spacing: -1px; }
 .subtitle { color: var(--text-muted); font-weight: 700; font-size: 1rem; }
 
-/* --- CATEGORY DROPDOWN (YELLOW OUTLINES ADDED) --- */
+/* --- CATEGORY DROPDOWN (YELLOW OUTLINES) --- */
 .category-container { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; }
 .category-container label { font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 12px; text-align: center; }
 
@@ -118,7 +118,7 @@ body {
 .recap-score span { font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1; }
 
 /* ==========================================
-   NEW: LANDSCAPE STAGE & EDGE TIMER
+   LANDSCAPE STAGE & EDGE TIMER
    ========================================== */
 .stage-landscape-view { padding: 10px !important; position: relative; justify-content: space-between; }
 .landscape-card-stage { flex: 1; width: 100%; margin-bottom: 12px; }
@@ -137,11 +137,11 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   box-shadow: var(--shadow-soft); border-left: 8px solid var(--secondary);
 }
-.score-card .player-info { display: flex; flex-direction: column; justify-content: center; }
-.score-card .player-info strong { font-size: 1.2rem; color: var(--text-main); line-height: 1.2; }
+.score-card .player-info { display: flex; flex-direction: column; justify-content: center; text-align: left; }
+.score-card .player-info strong { font-size: 1.25rem; color: var(--text-main); line-height: 1.2; }
 .score-card .card-subtext { font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-top: 4px; }
 .score-card .points-area { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; }
-.score-card .points { font-size: 2rem; font-weight: 900; color: var(--accent); /* POP PINK ACCENT */ line-height: 1; }
+.score-card .points { font-size: 2.2rem; font-weight: 900; color: var(--accent); /* POP PINK ACCENT */ line-height: 1.1; }
 .score-card .date-stamp { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 4px; }
 .filter-container { width: 100%; margin-bottom: 10px; }
 .guest-input { margin-top: 10px; }
