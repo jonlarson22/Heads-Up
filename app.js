@@ -18,6 +18,7 @@ let timeLeft = 60;
 let currentScore = 0;
 let currentPasses = 0; 
 let timerInterval = null;
+let isWaitingForRotation = false; // NEW: Tracks if Gatekeeper is active
 
 // Audio Objects
 const beepSound = new Audio('sounds/countdown_beep.mp3');
@@ -40,7 +41,7 @@ const categorySelect = document.getElementById('categorySelect');
 const startBtn = document.getElementById('startBtn');
 const viewLeaderboardBtn = document.getElementById('viewLeaderboardBtn');
 
-const scoreValue = document.getElementById('scoreValue'); // Kept safely in memory if needed
+const scoreValue = document.getElementById('scoreValue'); 
 const cardContent = document.getElementById('cardContent');
 const progressBar = document.getElementById('progressBar');
 const controlsPreStart = document.getElementById('controlsPreStart');
@@ -126,11 +127,13 @@ function initStage() {
 
   shuffledBag = [];
   clearInterval(timerInterval);
+  isWaitingForRotation = false;
   
   progressBar.style.width = '100%';
   progressBar.classList.remove('warning');
   currentScore = 0;
   currentPasses = 0;
+  scoreValue.textContent = '0';
   
   cardContent.innerHTML = `<h2 class="game-word">Place on forehead!</h2>`;
   controlsPreStart.classList.remove('hidden');
@@ -138,6 +141,36 @@ function initStage() {
 
   setView('stage');
 }
+
+// SMART GATEKEEPER: Eliminates double-tapping
+function handleCountdownRequest() {
+  // 1. Force programmatic lock if browser supports it
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch(() => {});
+  }
+
+  const isVertical = window.innerHeight > window.innerWidth;
+
+  if (isVertical) {
+    isWaitingForRotation = true;
+    controlsPreStart.classList.add('hidden');
+    cardContent.innerHTML = `<h2 class="game-word" style="color: var(--accent); font-size: 2.5rem;">📲 Rotate phone sideways to start!</h2>`;
+    return; 
+  }
+
+  startPreGameCountdown();
+}
+
+// THE AUTO-WAKEUP: Listens to physical phone gyroscope
+window.addEventListener('resize', () => {
+  if (!isWaitingForRotation) return;
+
+  const isNowHorizontal = window.innerWidth > window.innerHeight;
+  if (isNowHorizontal) {
+    isWaitingForRotation = false;
+    startPreGameCountdown(); // Auto-fires! No second tap needed.
+  }
+});
 
 function startPreGameCountdown() {
   controlsPreStart.classList.add('hidden');
@@ -178,13 +211,11 @@ function startActiveTimer() {
       playSound(beepSound);
     }
 
-    // CRITICAL FIX: Handle expiration cleanly
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      progressBar.style.width = '0%'; // Force visual bar to empty
+      progressBar.style.width = '0%'; 
       playSound(finalBuzzer);
       
-      // Wait 1 full second for CSS animation & buzzer audio to conclude
       setTimeout(() => {
         triggerRecap();
       }, 1000);
@@ -193,11 +224,15 @@ function startActiveTimer() {
 }
 
 function triggerRecap() {
+  // NEW: Release orientation lock so they can hold phone upright to read recap
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+
   recapPlayerName.textContent = `${currentPlayerName}'s Round`;
   recapScoreValue.textContent = currentScore;
   recapPassStats.textContent = `${currentScore} Correct • ${currentPasses} Passes`;
 
-  // Generate ISO date: YYYY-MM-DD
   const todayFormatted = new Date().toISOString().split('T')[0];
 
   saveScoreRecord({
@@ -206,7 +241,7 @@ function triggerRecap() {
     passes: currentPasses,
     category: currentCategory,
     catName: currentCategoryName,
-    date: todayFormatted // NEW: Save date
+    date: todayFormatted 
   });
 
   setView('recap');
@@ -265,7 +300,7 @@ function filterLeaderboardList() {
 // 8. EVENT LISTENERS
 // ==========================================
 startBtn.addEventListener('click', initStage);
-startTimerBtn.addEventListener('click', startPreGameCountdown);
+startTimerBtn.addEventListener('click', handleCountdownRequest);
 
 skipBtn.addEventListener('click', () => {
   currentPasses++;
@@ -274,6 +309,7 @@ skipBtn.addEventListener('click', () => {
 
 correctBtn.addEventListener('click', () => {
   currentScore++;
+  scoreValue.textContent = currentScore; // RESTORED BUG FIX
   drawNextCard();
 });
 
