@@ -16,9 +16,9 @@ let currentPlayerName = '';
 const ROUND_DURATION = 60;
 let timeLeft = 60;
 let currentScore = 0;
-let currentPasses = 0; 
+let currentSkips = 0; // VOCABULARY CHANGE: Passes -> Skips
 let timerInterval = null;
-let isWaitingForRotation = false; // NEW: Tracks if Gatekeeper is active
+let isWaitingForRotation = false; 
 
 // Audio Objects
 const beepSound = new Audio('sounds/countdown_beep.mp3');
@@ -132,19 +132,18 @@ function initStage() {
   progressBar.style.width = '100%';
   progressBar.classList.remove('warning');
   currentScore = 0;
-  currentPasses = 0;
+  currentSkips = 0;
   scoreValue.textContent = '0';
   
   cardContent.innerHTML = `<h2 class="game-word">Place on forehead!</h2>`;
   controlsPreStart.classList.remove('hidden');
   controlsActive.classList.add('hidden');
 
-  setView('stage');
+  setView('stage'); // BUG FIXED: Router successfully called!
 }
 
 // SMART GATEKEEPER: Eliminates double-tapping
 function handleCountdownRequest() {
-  // 1. Force programmatic lock if browser supports it
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
   }
@@ -161,14 +160,12 @@ function handleCountdownRequest() {
   startPreGameCountdown();
 }
 
-// THE AUTO-WAKEUP: Listens to physical phone gyroscope
+// AUTO-WAKEUP: Listens to physical phone gyroscope rotation
 window.addEventListener('resize', () => {
   if (!isWaitingForRotation) return;
-
-  const isNowHorizontal = window.innerWidth > window.innerHeight;
-  if (isNowHorizontal) {
+  if (window.innerWidth > window.innerHeight) {
     isWaitingForRotation = false;
-    startPreGameCountdown(); // Auto-fires! No second tap needed.
+    startPreGameCountdown(); 
   }
 });
 
@@ -216,29 +213,27 @@ function startActiveTimer() {
       progressBar.style.width = '0%'; 
       playSound(finalBuzzer);
       
-      setTimeout(() => {
-        triggerRecap();
-      }, 1000);
+      setTimeout(() => triggerRecap(), 1000);
     }
   }, 1000);
 }
 
 function triggerRecap() {
-  // NEW: Release orientation lock so they can hold phone upright to read recap
+  // Unlock phone rotation on Recap screen
   if (screen.orientation && screen.orientation.unlock) {
     screen.orientation.unlock();
   }
 
   recapPlayerName.textContent = `${currentPlayerName}'s Round`;
   recapScoreValue.textContent = currentScore;
-  recapPassStats.textContent = `${currentScore} Correct • ${currentPasses} Passes`;
+  recapPassStats.textContent = `${currentScore} Correct • ${currentSkips} Skips`;
 
   const todayFormatted = new Date().toISOString().split('T')[0];
 
   saveScoreRecord({
     player: currentPlayerName,
     score: currentScore,
-    passes: currentPasses,
+    skips: currentSkips, // VOCABULARY UPDATED
     category: currentCategory,
     catName: currentCategoryName,
     date: todayFormatted 
@@ -251,8 +246,8 @@ function triggerRecap() {
 // 7. LEADERBOARD ENGINE
 // ==========================================
 let LOCAL_LEADERBOARD = JSON.parse(localStorage.getItem('headsUpScores')) || [
-  { player: "Mom", score: 14, passes: 1, category: "family_jokes", catName: "Inside Jokes", date: "2026-06-25" },
-  { player: "Jonathan", score: 12, passes: 3, category: "movies", catName: "Movie Night", date: "2026-06-26" }
+  { player: "Mom", score: 14, skips: 1, category: "family_jokes", catName: "Inside Jokes", date: "2026-06-25" },
+  { player: "Jonathan", score: 12, skips: 3, category: "movies", catName: "Movie Night", date: "2026-06-26" }
 ];
 
 function saveScoreRecord(record) {
@@ -282,10 +277,13 @@ function filterLeaderboardList() {
   filtered.forEach(entry => {
     const card = document.createElement('div');
     card.className = 'score-card';
+    // Perfectly aligned Flexbox rows for text vs date
     card.innerHTML = `
       <div class="player-info">
-        <strong>${entry.player}</strong><br>
-        <small>${entry.catName} (${entry.passes} Passes)</small>
+        <strong>${entry.player}</strong>
+        <div class="card-subtext">
+          <span>${entry.catName} (${entry.skips} Skips)</span>
+        </div>
       </div>
       <div class="points-area">
         <div class="points">${entry.score}</div>
@@ -303,13 +301,13 @@ startBtn.addEventListener('click', initStage);
 startTimerBtn.addEventListener('click', handleCountdownRequest);
 
 skipBtn.addEventListener('click', () => {
-  currentPasses++;
+  currentSkips++;
   drawNextCard();
 });
 
 correctBtn.addEventListener('click', () => {
   currentScore++;
-  scoreValue.textContent = currentScore; // RESTORED BUG FIX
+  scoreValue.textContent = currentScore; // RESTORED SCORE DISPLAY BUG FIX
   drawNextCard();
 });
 
