@@ -6,28 +6,18 @@
   <title>Family Heads Up</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Quick helper styles for the Leaderboard cards */
-    .leaderboard-list {
-      flex: 1;
-      overflow-y: auto;
-      width: 100%;
-      margin: 15px 0;
-      padding-right: 4px;
-    }
+    /* Helper styles for Leaderboard & Landscape layout */
+    .leaderboard-list { flex: 1; overflow-y: auto; width: 100%; margin: 15px 0; padding-right: 4px; }
     .score-card {
-      background: white;
-      padding: 16px 20px;
-      border-radius: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow-soft);
-      border-left: 6px solid var(--secondary);
+      background: white; padding: 16px 20px; border-radius: 16px; margin-bottom: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: var(--shadow-soft); border-left: 6px solid var(--secondary);
     }
     .score-card .player-info strong { font-size: 1.2rem; color: var(--text-main); }
     .score-card .player-info small { color: var(--text-muted); font-weight: 700; }
-    .score-card .points { font-size: 1.8rem; font-weight: 900; color: #06D6A0; }
+    .score-card .points-area { text-align: right; }
+    .score-card .points { font-size: 1.8rem; font-weight: 900; color: #06D6A0; line-height: 1; }
+    .score-card .date-stamp { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 4px; display: block; }
     
     .filter-container { width: 100%; margin-bottom: 10px; }
     .guest-input { margin-top: 10px; }
@@ -69,33 +59,30 @@
       </footer>
     </section>
 
-    <section id="view-stage" class="view">
-      <header class="stage-header">
-        <span id="stageCategoryTitle" class="badge">Category</span>
-        <div class="score-badge">Score: <span id="scoreValue">0</span></div>
-      </header>
-
-      <div class="card-stage">
-        <div class="flashcard">
+    <section id="view-stage" class="view stage-landscape-view">
+      
+      <div class="card-stage landscape-card-stage">
+        <div class="flashcard landscape-flashcard">
           <div class="card-content" id="cardContent">
-            <h2 class="game-word">Place on forehead to start!</h2>
+            <h2 class="game-word">Place on forehead!</h2>
           </div>
-        </div>
-        <div class="progress-container">
-          <div class="progress-bar" id="progressBar"></div>
         </div>
       </div>
 
-      <footer class="app-footer">
+      <div class="landscape-controls-area">
         <div id="controlsPreStart" class="control-group">
-          <button id="startTimerBtn" class="secondary-btn">Tap to Begin Countdown</button>
+          <button id="startTimerBtn" class="secondary-btn">Tap to Begin</button>
         </div>
 
         <div id="controlsActive" class="control-group game-controls hidden">
           <button id="skipBtn" class="action-btn skip-btn">Pass</button>
           <button id="correctBtn" class="action-btn correct-btn">Correct!</button>
         </div>
-      </footer>
+      </div>
+
+      <div class="progress-container bottom-edge-timer">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
     </section>
 
     <section id="view-recap" class="view">
@@ -130,8 +117,7 @@
         </select>
       </div>
 
-      <div id="leaderboardList" class="leaderboard-list">
-        </div>
+      <div id="leaderboardList" class="leaderboard-list"></div>
 
       <footer class="app-footer">
         <button id="backToLobbyBtn" class="primary-btn">Back to Menu</button>
