@@ -16,7 +16,7 @@ let currentPlayerName = '';
 const ROUND_DURATION = 60;
 let timeLeft = 60;
 let currentScore = 0;
-let currentSkips = 0; // VOCABULARY CHANGE: Passes -> Skips
+let currentSkips = 0; 
 let timerInterval = null;
 let isWaitingForRotation = false; 
 
@@ -133,16 +133,18 @@ function initStage() {
   progressBar.classList.remove('warning');
   currentScore = 0;
   currentSkips = 0;
-  scoreValue.textContent = '0';
+  
+  // CRITICAL FIX: Guarded against null crash
+  if (scoreValue) scoreValue.textContent = '0';
   
   cardContent.innerHTML = `<h2 class="game-word">Place on forehead!</h2>`;
   controlsPreStart.classList.remove('hidden');
   controlsActive.classList.add('hidden');
 
-  setView('stage'); // BUG FIXED: Router successfully called!
+  setView('stage'); 
 }
 
-// SMART GATEKEEPER: Eliminates double-tapping
+// SMART GATEKEEPER: Enforces horizontal orientation
 function handleCountdownRequest() {
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
@@ -219,7 +221,6 @@ function startActiveTimer() {
 }
 
 function triggerRecap() {
-  // Unlock phone rotation on Recap screen
   if (screen.orientation && screen.orientation.unlock) {
     screen.orientation.unlock();
   }
@@ -233,7 +234,7 @@ function triggerRecap() {
   saveScoreRecord({
     player: currentPlayerName,
     score: currentScore,
-    skips: currentSkips, // VOCABULARY UPDATED
+    skips: currentSkips, 
     category: currentCategory,
     catName: currentCategoryName,
     date: todayFormatted 
@@ -275,14 +276,16 @@ function filterLeaderboardList() {
   }
 
   filtered.forEach(entry => {
+    // CRITICAL FIX: Safe fallback against legacy test rounds in localStorage
+    const skipCount = entry.skips ?? entry.passes ?? 0;
+    
     const card = document.createElement('div');
     card.className = 'score-card';
-    // Perfectly aligned Flexbox rows for text vs date
     card.innerHTML = `
       <div class="player-info">
         <strong>${entry.player}</strong>
         <div class="card-subtext">
-          <span>${entry.catName} (${entry.skips} Skips)</span>
+          <span>${entry.catName} (${skipCount} Skips)</span>
         </div>
       </div>
       <div class="points-area">
@@ -307,7 +310,7 @@ skipBtn.addEventListener('click', () => {
 
 correctBtn.addEventListener('click', () => {
   currentScore++;
-  scoreValue.textContent = currentScore; // RESTORED SCORE DISPLAY BUG FIX
+  if (scoreValue) scoreValue.textContent = currentScore; // CRITICAL GUARD
   drawNextCard();
 });
 
