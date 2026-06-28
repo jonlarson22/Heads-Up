@@ -6,23 +6,6 @@
   <title>Family Heads Up</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
-  <style>
-    /* Helper styles for Leaderboard & Landscape layout */
-    .leaderboard-list { flex: 1; overflow-y: auto; width: 100%; margin: 15px 0; padding-right: 4px; }
-    .score-card {
-      background: white; padding: 16px 20px; border-radius: 16px; margin-bottom: 12px;
-      display: flex; justify-content: space-between; align-items: center;
-      box-shadow: var(--shadow-soft); border-left: 6px solid var(--secondary);
-    }
-    .score-card .player-info strong { font-size: 1.2rem; color: var(--text-main); }
-    .score-card .player-info small { color: var(--text-muted); font-weight: 700; }
-    .score-card .points-area { text-align: right; }
-    .score-card .points { font-size: 1.8rem; font-weight: 900; color: #06D6A0; line-height: 1; }
-    .score-card .date-stamp { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 4px; display: block; }
-    
-    .filter-container { width: 100%; margin-bottom: 10px; }
-    .guest-input { margin-top: 10px; }
-  </style>
 </head>
 <body>
 
@@ -55,13 +38,12 @@
       </div>
 
       <footer class="app-footer">
-        <button id="startBtn" class="primary-btn">Start Game (60s)</button>
+        <button id="startBtn" class="secondary-btn">Start Game (60s)</button>
         <button id="viewLeaderboardBtn" class="action-btn" style="background: var(--text-muted); box-shadow: 0 5px 0px #6C757D;">🏆 View Leaderboard</button>
       </footer>
     </section>
 
     <section id="view-stage" class="view stage-landscape-view">
-      
       <div class="card-stage landscape-card-stage">
         <div class="flashcard landscape-flashcard">
           <div class="card-content" id="cardContent">
@@ -76,7 +58,7 @@
         </div>
 
         <div id="controlsActive" class="control-group game-controls hidden">
-          <button id="skipBtn" class="action-btn skip-btn">Pass</button>
+          <button id="skipBtn" class="action-btn skip-btn">Skip</button>
           <button id="correctBtn" class="action-btn correct-btn">Correct!</button>
         </div>
       </div>
@@ -93,7 +75,7 @@
           <div class="recap-score">
             <p id="recapPlayerName">Player</p>
             <span id="recapScoreValue">0</span>
-            <p id="recapPassStats" style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">0 Correct • 0 Passes</p>
+            <p id="recapPassStats" style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">0 Correct • 0 Skips</p>
           </div>
         </div>
       </div>
