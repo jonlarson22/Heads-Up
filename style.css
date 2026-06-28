@@ -120,3 +120,51 @@ body {
 .recap-box h2 { font-size: 2.5rem; color: var(--text-main); margin-bottom: 16px; font-weight: 900; }
 .recap-score p { color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
 .recap-score span { font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1; }
+
+/* ==========================================
+   NEW: LANDSCAPE STAGE & EDGE TIMER
+   ========================================== */
+
+/* Remove padding on gameplay view so card goes edge-to-edge */
+.stage-landscape-view {
+  padding: 10px !important;
+  position: relative;
+  justify-content: space-between;
+}
+
+.landscape-card-stage {
+  flex: 1;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.landscape-flashcard {
+  border-width: 12px; /* Thicker yellow border */
+  border-radius: 36px;
+}
+
+/* Make typography scale aggressively in landscape */
+.stage-landscape-view .game-word {
+  font-size: clamp(3.5rem, 14vw, 7.5rem);
+}
+
+.landscape-controls-area {
+  width: 100%;
+  padding-bottom: 16px; /* Space above bottom timer bar */
+  z-index: 10;
+}
+
+/* Flush bottom timer bar */
+.bottom-edge-timer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 16px;
+  border-radius: 0;
+  background: #E0E1E6;
+}
+
+.bottom-edge-timer .progress-bar {
+  border-radius: 0;
+}
