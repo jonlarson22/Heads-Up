@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Database Seeder</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; text-align: center; }
+    button { padding: 15px 30px; font-size: 1.2rem; background: #06D6A0; border: none; border-radius: 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Firebase Database Seeder</h1>
+  <p>Click the button below to push your initial categories to Firestore.</p>
+  <button id="seedBtn">Push Data to Firebase</button>
+
+  <script type="module">
+    import { db } from './firebase-init.js';
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  
+    const categoriesData = {
+      "nineties_tv": { 
+        name: "90s TV Shows", 
+        words: ["Friends", "Seinfeld", "The Fresh Prince", "X-Files"] 
+      },
+      "disney_characters": { 
+        name: "Disney Characters", 
+        words: ["Mickey Mouse", "Simba", "Elsa", "Buzz Lightyear"] 
+      },
+      "animals": { 
+        name: "Animals", 
+        words: ["Lion", "Elephant", "Penguin", "Sloth"] 
+      },
+      "movies": { 
+        name: "Movies", 
+        words: ["Star Wars", "The Matrix", "Toy Story", "Inception"] 
+      },
+      "food": { 
+        name: "Food", 
+        words: ["Pizza", "Sushi", "Hamburger", "Ice Cream"] 
+      }
+    };
+  
+    document.getElementById('seedBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('seedBtn');
+      btn.innerText = "Uploading to Firestore...";
+      btn.disabled = true;
+  
+      try {
+        // Loop through each category key
+        for (const [id, data] of Object.entries(categoriesData)) {
+          await setDoc(doc(db, "categories", id), data);
+          console.log(`Successfully uploaded: ${data.name}`);
+        }
+        alert("All categories loaded! Check your Firestore database.");
+        btn.innerText = "Success!";
+      } catch (error) {
+        console.error("Upload failed: ", error);
+        btn.innerText = "Error - check console";
+      }
+    });
+  </script>
+</body>
+</html>
