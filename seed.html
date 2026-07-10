@@ -14,40 +14,48 @@
   <button id="seedBtn">Push Data to Firebase</button>
 
   <script type="module">
-    // 1. Import your existing database connection
     import { db } from './firebase-init.js';
     import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-    const FALLBACK_DATA = {
-      family_jokes: { 
-        name: "Inside Jokes", 
-        words: ["Dad's Sneezing", "The Dog's Breath", "Camping 2025", "Mom's Cooking", "Burnt Toast", "Roadtrip Songs"] 
+  
+    const categoriesData = {
+      "nineties_tv": { 
+        name: "90s TV Shows", 
+        words: ["Friends", "Seinfeld", "The Fresh Prince", "X-Files"] 
       },
-      movies: { 
-        name: "Movie Night", 
-        words: ["Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park", "Shrek", "Moana"] 
+      "disney_characters": { 
+        name: "Disney Characters", 
+        words: ["Mickey Mouse", "Simba", "Elsa", "Buzz Lightyear"] 
       },
-      animals: { 
-        name: "Silly Animals", 
-        words: ["Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin", "Kangaroo", "Cheetah"] 
+      "animals": { 
+        name: "Animals", 
+        words: ["Lion", "Elephant", "Penguin", "Sloth"] 
+      },
+      "movies": { 
+        name: "Movies", 
+        words: ["Star Wars", "The Matrix", "Toy Story", "Inception"] 
+      },
+      "food": { 
+        name: "Food", 
+        words: ["Pizza", "Sushi", "Hamburger", "Ice Cream"] 
       }
     };
-
+  
     document.getElementById('seedBtn').addEventListener('click', async () => {
       const btn = document.getElementById('seedBtn');
-      btn.innerText = "Uploading...";
+      btn.innerText = "Uploading to Firestore...";
       btn.disabled = true;
-
+  
       try {
-        for (const [id, data] of Object.entries(FALLBACK_DATA)) {
+        // Loop through each category key
+        for (const [id, data] of Object.entries(categoriesData)) {
           await setDoc(doc(db, "categories", id), data);
-          console.log(`Saved ${id}`);
+          console.log(`Successfully uploaded: ${data.name}`);
         }
-        alert("Success! All data pushed to Firestore. You can safely delete this file.");
-        btn.innerText = "Done!";
+        alert("All categories loaded! Check your Firestore database.");
+        btn.innerText = "Success!";
       } catch (error) {
         console.error("Upload failed: ", error);
-        btn.innerText = "Error - Check Console";
+        btn.innerText = "Error - check console";
       }
     });
   </script>
