@@ -39,7 +39,13 @@
         words: ["Pizza", "Sushi", "Hamburger", "Ice Cream"] 
       }
     };
-  
+
+    const playersData = {
+      "p1": { name: "Jonathan"},
+      "p2": { name: "Sarah"},
+      "p3": { name: "Mike"}
+    };
+    
     document.getElementById('seedBtn').addEventListener('click', async () => {
       const btn = document.getElementById('seedBtn');
       btn.innerText = "Uploading to Firestore...";
@@ -50,6 +56,9 @@
         for (const [id, data] of Object.entries(categoriesData)) {
           await setDoc(doc(db, "categories", id), data);
           console.log(`Successfully uploaded: ${data.name}`);
+        }
+         for (const [id, data] of Object.entries(playersData)) {
+          await setDoc(doc(db, "players", id), data);
         }
         alert("All categories loaded! Check your Firestore database.");
         btn.innerText = "Success!";
