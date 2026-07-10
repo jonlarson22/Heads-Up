@@ -1,3 +1,6 @@
+import { db } from './firebase-init.js';
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
 // ==========================================
 // 1. GAME DEFINITIONS & STATE
 // ==========================================
@@ -298,6 +301,37 @@ function filterLeaderboardList() {
 }
 
 // ==========================================
+// FIREBASE DATA INITIALIZATION
+// ==========================================
+async function loadCategoriesFromFirebase() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "categories"));
+
+    if (!querySnapshot.empty) {
+      gameData = {};
+      categorySelect.innerHTML = '';
+
+      querySnapshot.forEach((doc) => {
+        const catData = doc.data();
+        gameData[doc.id] = catData.words;
+
+        // Build the new dropdown option
+        const opt = document.createElement('option');
+        opt.value = doc.id;
+        opt.textContent = catData.name; 
+        categorySelect.appendChild(opt);
+      });
+      
+      console.log("Successfully loaded categories from Firebase!");
+    } else {
+      console.log("Firebase is empty. Using fallback data.");
+    }
+  } catch (error) {
+    console.warn("Could not connect to Firebase (Offline?). Using fallback data.", error);
+  }
+}
+
+// ==========================================
 // 8. EVENT LISTENERS
 // ==========================================
 startBtn.addEventListener('click', initStage);
@@ -322,6 +356,8 @@ backToLobbyBtn.addEventListener('click', () => setView('lobby'));
 filterCategory.addEventListener('change', filterLeaderboardList);
 
 window.addEventListener('DOMContentLoaded', () => {
+  loadCategoriesFromFirebase();
+  
   const lastPlayer = localStorage.getItem('last_player');
   if (lastPlayer) {
     playerSelect.value = lastPlayer;
