@@ -294,6 +294,20 @@ async function renderLeaderboard() {
     
     // Sort highest to lowest
     DB_LEADERBOARD.sort((a, b) => b.score - a.score);
+
+    // NEW: Grab unique player names and build the dropdown
+    const uniquePlayers = [...new Set(DB_LEADERBOARD.map(item => item.player))].sort();
+    filterPlayer.innerHTML = '<option value="">All Players</option>';
+    
+    uniquePlayers.forEach(player => {
+      if (player) {
+        const opt = document.createElement('option');
+        opt.value = player;
+        opt.textContent = player;
+        filterPlayer.appendChild(opt);
+      }
+    });
+
     filterLeaderboardList();
     
   } catch (error) {
@@ -304,46 +318,42 @@ async function renderLeaderboard() {
 
 function filterLeaderboardList() {
   const selectedCat = filterCategory.value;
-  const searchName = filterPlayer.value.toLowerCase().trim();
+  const searchName = filterPlayer.value; // Exact match now
   
   leaderboardList.innerHTML = '';
 
-  // 1. Filter by Category
   let filtered = selectedCat === 'ALL' 
     ? DB_LEADERBOARD 
     : DB_LEADERBOARD.filter(item => item.category === selectedCat);
 
-  // 2. Filter by Player Name (if they typed something)
   if (searchName !== '') {
-    filtered = filtered.filter(item => 
-      item.player && item.player.toLowerCase().includes(searchName)
-    );
+    filtered = filtered.filter(item => item.player === searchName);
   }
 
-  // 3. Limit to top 50 results so the screen doesn't get overwhelmed
   filtered = filtered.slice(0, 50);
 
   if (filtered.length === 0) {
-    leaderboardList.innerHTML = `No scores found!`;
+    leaderboardList.innerHTML = `<p style="text-align:center; color: var(--text-muted); margin-top: 40px;">No scores found!</p>`;
     return;
   }
 
   filtered.forEach(entry => {
     const skipCount = entry.skips ?? entry.passes ?? 0;
-    
     const card = document.createElement('div');
     card.className = 'score-card';
+    
+    // NEW: Clean, modern Flexbox layout
     card.innerHTML = `
-      
-        ${entry.player}
-        
-          ${entry.catName} (${skipCount} Skips)
-        
-      
-      
-        ${entry.score}
-        ${entry.date || 'Recent'}
-      
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
+          <span style="font-size: 1.3rem; font-weight: 800; color: #333; line-height: 1;">${entry.player}</span>
+          <span style="font-size: 0.85rem; color: #888; font-weight: 500;">${entry.catName}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right;">
+          <span style="font-size: 1.8rem; font-weight: 900; color: #8A2BE2; line-height: 1;">${entry.score}</span>
+          <span style="font-size: 0.75rem; color: #aaa;">${entry.date || 'Recent'} • ${skipCount} Skips</span>
+        </div>
+      </div>
     `;
     leaderboardList.appendChild(card);
   });
@@ -447,7 +457,7 @@ changeModeBtn.addEventListener('click', () => setView('lobby'));
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
 backToLobbyBtn.addEventListener('click', () => setView('lobby'));
 filterCategory.addEventListener('change', filterLeaderboardList);
-filterPlayer.addEventListener('input', filterLeaderboardList);
+filterPlayer.addEventListener('change', filterLeaderboardList);
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCategoriesFromFirebase();
