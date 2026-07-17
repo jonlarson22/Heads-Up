@@ -277,12 +277,6 @@ async function saveScoreRecord(record) {
 // ==========================================
 // 7. LEADERBOARD ENGINE
 // ==========================================
-function saveScoreRecord(record) {
-  LOCAL_LEADERBOARD.push(record);
-  LOCAL_LEADERBOARD.sort((a, b) => b.score - a.score);
-  localStorage.setItem('headsUpScores', JSON.stringify(LOCAL_LEADERBOARD));
-}
-
 let DB_LEADERBOARD = []; // Replaces LOCAL_LEADERBOARD
 
 async function renderLeaderboard() {
