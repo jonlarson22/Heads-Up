@@ -344,20 +344,31 @@ async function loadCategoriesFromFirebase() {
 
     if (!querySnapshot.empty) {
       gameData = {};
+      
+      // Clear both dropdowns
       categorySelect.innerHTML = '';
+      
+      // Keep the "ALL" option at the top of the leaderboard filter
+      filterCategory.innerHTML = '<option value="ALL">Showing: All Categories</option>';
 
       querySnapshot.forEach((doc) => {
         const catData = doc.data();
         gameData[doc.id] = catData.words;
 
-        // Build the new dropdown option
-        const opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.textContent = catData.name; 
-        categorySelect.appendChild(opt);
+        // 1. Add to the main Lobby dropdown
+        const lobbyOpt = document.createElement('option');
+        lobbyOpt.value = doc.id;
+        lobbyOpt.textContent = catData.name; 
+        categorySelect.appendChild(lobbyOpt);
+        
+        // 2. Add to the Leaderboard Filter dropdown
+        const filterOpt = document.createElement('option');
+        filterOpt.value = doc.id;
+        filterOpt.textContent = catData.name;
+        filterCategory.appendChild(filterOpt);
       });
       
-      console.log("Successfully loaded categories from Firebase!");
+      console.log("Successfully loaded categories into both dropdowns!");
     } else {
       console.log("Firebase is empty. Using fallback data.");
     }
