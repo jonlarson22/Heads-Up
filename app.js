@@ -452,22 +452,27 @@ correctBtn.addEventListener('click', () => {
 });
 
 playAgainBtn.addEventListener('click', initStage);
-changeModeBtn.addEventListener('click', () => setView('lobby'));
+changeModeBtn.addEventListener('click', () => {
+  setView('lobby');
+  playerSelect.value = ""; // Forces dropdown back to "Select player..."
+  guestNameInput.value = ""; // Clears any previously typed guest name
+  guestNameInput.classList.add('hidden'); // Hides the guest box
+});
 
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
-backToLobbyBtn.addEventListener('click', () => setView('lobby'));
+backToLobbyBtn.addEventListener('click', () => {
+  setView('lobby');
+  playerSelect.value = ""; 
+  guestNameInput.value = ""; 
+  guestNameInput.classList.add('hidden'); 
+});
+
 filterCategory.addEventListener('change', filterLeaderboardList);
 filterPlayer.addEventListener('change', filterLeaderboardList);
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCategoriesFromFirebase();
   await loadPlayersFromFirebase();
-
-  const lastPlayer = localStorage.getItem('last_player');
-  if (lastPlayer) {
-    playerSelect.value = lastPlayer;
-    if (lastPlayer === 'GUEST') guestNameInput.classList.remove('hidden');
-  }
 });
 
 const saveNameBtn = document.getElementById('saveNameBtn');
