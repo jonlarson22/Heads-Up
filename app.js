@@ -61,6 +61,7 @@ const playAgainBtn = document.getElementById('playAgainBtn');
 const changeModeBtn = document.getElementById('changeModeBtn');
 
 const filterCategory = document.getElementById('filterCategory');
+const filterPlayer = document.getElementById('filterPlayer');
 const leaderboardList = document.getElementById('leaderboardList');
 const backToLobbyBtn = document.getElementById('backToLobbyBtn');
 
@@ -303,14 +304,27 @@ async function renderLeaderboard() {
 
 function filterLeaderboardList() {
   const selectedCat = filterCategory.value;
+  const searchName = filterPlayer.value.toLowerCase().trim();
+  
   leaderboardList.innerHTML = '';
 
-  const filtered = selectedCat === 'ALL' 
+  // 1. Filter by Category
+  let filtered = selectedCat === 'ALL' 
     ? DB_LEADERBOARD 
     : DB_LEADERBOARD.filter(item => item.category === selectedCat);
 
+  // 2. Filter by Player Name (if they typed something)
+  if (searchName !== '') {
+    filtered = filtered.filter(item => 
+      item.player && item.player.toLowerCase().includes(searchName)
+    );
+  }
+
+  // 3. Limit to top 50 results so the screen doesn't get overwhelmed
+  filtered = filtered.slice(0, 50);
+
   if (filtered.length === 0) {
-    leaderboardList.innerHTML = `<p style="text-align:center; color: var(--text-muted); margin-top: 40px;">No scores logged for this category yet!</p>`;
+    leaderboardList.innerHTML = `No scores found!`;
     return;
   }
 
@@ -320,16 +334,16 @@ function filterLeaderboardList() {
     const card = document.createElement('div');
     card.className = 'score-card';
     card.innerHTML = `
-      <div class="player-info">
-        <strong>${entry.player}</strong>
-        <div class="card-subtext">
-          <span>${entry.catName} (${skipCount} Skips)</span>
-        </div>
-      </div>
-      <div class="points-area">
-        <div class="points">${entry.score}</div>
-        <span class="date-stamp">${entry.date || 'Recent'}</span>
-      </div>
+      
+        ${entry.player}
+        
+          ${entry.catName} (${skipCount} Skips)
+        
+      
+      
+        ${entry.score}
+        ${entry.date || 'Recent'}
+      
     `;
     leaderboardList.appendChild(card);
   });
@@ -433,6 +447,7 @@ changeModeBtn.addEventListener('click', () => setView('lobby'));
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
 backToLobbyBtn.addEventListener('click', () => setView('lobby'));
 filterCategory.addEventListener('change', filterLeaderboardList);
+filterPlayer.addEventListener('input', filterLeaderboardList);
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCategoriesFromFirebase();
