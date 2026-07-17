@@ -11,4 +11,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const db = getFirestore(app);
+
+enableIndexedDbPersistence(db).catch((err) => {
+  console.warn("Offline persistence error:", err.code);
+});
+
+export { db };
