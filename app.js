@@ -331,6 +331,39 @@ async function loadCategoriesFromFirebase() {
   }
 }
 
+async function loadPlayersFromFirebase() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "players"));
+
+    if (!querySnapshot.empty) {
+      // Clear the hardcoded options but keep the placeholder and Guest option
+      playerSelect.innerHTML = `
+        <option value="" disabled selected>Select player...</option>
+        <option value="GUEST">➕ Guest (Type Name)...</option>
+      `;
+
+      // Target the Guest option so we can insert names alphabetically above it
+      const guestOption = playerSelect.querySelector('option[value="GUEST"]');
+
+      querySnapshot.forEach((doc) => {
+        const playerData = doc.data();
+        
+        // Build the new player option
+        const opt = document.createElement('option');
+        opt.value = playerData.name;
+        opt.textContent = playerData.name; 
+        
+        // Insert it right above the Guest option
+        playerSelect.insertBefore(opt, guestOption);
+      });
+      
+      console.log("Successfully loaded players from Firebase!");
+    }
+  } catch (error) {
+    console.warn("Could not connect to Firebase for players.", error);
+  }
+}
+
 // ==========================================
 // 8. EVENT LISTENERS
 // ==========================================
@@ -355,9 +388,10 @@ viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
 backToLobbyBtn.addEventListener('click', () => setView('lobby'));
 filterCategory.addEventListener('change', filterLeaderboardList);
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadCategoriesFromFirebase();
-  
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadCategoriesFromFirebase();
+  await loadPlayersFromFirebase();
+
   const lastPlayer = localStorage.getItem('last_player');
   if (lastPlayer) {
     playerSelect.value = lastPlayer;
