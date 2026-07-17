@@ -1,5 +1,5 @@
 import { db } from './firebase-init.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { collection, getDocs, addDoc, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // ==========================================
 // 1. GAME DEFINITIONS & STATE
@@ -14,7 +14,8 @@ let gameData = FALLBACK_DATA;
 let shuffledBag = [];
 let currentCategory = 'family_jokes';
 let currentCategoryName = 'Inside Jokes';
-let currentPlayerName = ''; 
+let currentPlayerName = '';
+let isGuestPlayer = false;
 
 const ROUND_DURATION = 60;
 let timeLeft = 60;
@@ -87,10 +88,14 @@ playerSelect.addEventListener('change', (e) => {
 function getActivePlayerName() {
   const selected = playerSelect.value;
   if (!selected) return null;
+  
   if (selected === 'GUEST') {
+    isGuestPlayer = true;
     const custom = guestNameInput.value.trim();
     return custom.length > 0 ? custom : "Mystery Guest";
   }
+  
+  isGuestPlayer = false;
   return selected;
 }
 
@@ -232,6 +237,18 @@ function triggerRecap() {
   recapScoreValue.textContent = currentScore;
   recapPassStats.textContent = `${currentScore} Correct • ${currentSkips} Skips`;
 
+  // Handle the Save Name button visibility
+  const saveNameBtn = document.getElementById('saveNameBtn');
+  if (saveNameBtn) {
+    if (isGuestPlayer) {
+      saveNameBtn.classList.remove('hidden');
+      saveNameBtn.disabled = false;
+      saveNameBtn.textContent = "💾 Save My Name for Next Time";
+    } else {
+      saveNameBtn.classList.add('hidden');
+    }
+  }
+
   const todayFormatted = new Date().toISOString().split('T')[0];
 
   saveScoreRecord({
@@ -246,23 +263,48 @@ function triggerRecap() {
   setView('recap');
 }
 
+// Replace the old localStorage save with this Firestore push
+async function saveScoreRecord(record) {
+  try {
+    // This will cache locally if offline, and sync to Firebase when online
+    await addDoc(collection(db, "scores"), record);
+    console.log("Score queued for Firebase!");
+  } catch (error) {
+    console.error("Error saving score:", error);
+  }
+}
+
 // ==========================================
 // 7. LEADERBOARD ENGINE
 // ==========================================
-let LOCAL_LEADERBOARD = JSON.parse(localStorage.getItem('headsUpScores')) || [
-  { player: "Mom", score: 14, skips: 1, category: "family_jokes", catName: "Inside Jokes", date: "2026-06-25" },
-  { player: "Jonathan", score: 12, skips: 3, category: "movies", catName: "Movie Night", date: "2026-06-26" }
-];
-
 function saveScoreRecord(record) {
   LOCAL_LEADERBOARD.push(record);
   LOCAL_LEADERBOARD.sort((a, b) => b.score - a.score);
   localStorage.setItem('headsUpScores', JSON.stringify(LOCAL_LEADERBOARD));
 }
 
-function renderLeaderboard() {
+let DB_LEADERBOARD = []; // Replaces LOCAL_LEADERBOARD
+
+async function renderLeaderboard() {
   setView('leaderboard');
-  filterLeaderboardList();
+  leaderboardList.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--text-muted);">Fetching live scores...</p>';
+  
+  try {
+    const querySnapshot = await getDocs(collection(db, "scores"));
+    DB_LEADERBOARD = [];
+    
+    querySnapshot.forEach((doc) => {
+      DB_LEADERBOARD.push(doc.data());
+    });
+    
+    // Sort highest to lowest
+    DB_LEADERBOARD.sort((a, b) => b.score - a.score);
+    filterLeaderboardList();
+    
+  } catch (error) {
+    console.error("Error loading scores:", error);
+    leaderboardList.innerHTML = '<p style="text-align:center; padding: 20px; color: var(--accent);">Offline: Cannot load leaderboard right now.</p>';
+  }
 }
 
 function filterLeaderboardList() {
@@ -270,16 +312,15 @@ function filterLeaderboardList() {
   leaderboardList.innerHTML = '';
 
   const filtered = selectedCat === 'ALL' 
-    ? LOCAL_LEADERBOARD 
-    : LOCAL_LEADERBOARD.filter(item => item.category === selectedCat);
+    ? DB_LEADERBOARD 
+    : DB_LEADERBOARD.filter(item => item.category === selectedCat);
 
   if (filtered.length === 0) {
-    leaderboardList.innerHTML = `<p style="color: var(--text-muted); margin-top: 40px;">No scores logged for this category yet!</p>`;
+    leaderboardList.innerHTML = `<p style="text-align:center; color: var(--text-muted); margin-top: 40px;">No scores logged for this category yet!</p>`;
     return;
   }
 
   filtered.forEach(entry => {
-    // CRITICAL FIX: Safe fallback against legacy test rounds in localStorage
     const skipCount = entry.skips ?? entry.passes ?? 0;
     
     const card = document.createElement('div');
@@ -398,3 +439,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (lastPlayer === 'GUEST') guestNameInput.classList.remove('hidden');
   }
 });
+
+const saveNameBtn = document.getElementById('saveNameBtn');
+if (saveNameBtn) {
+  saveNameBtn.addEventListener('click', async () => {
+    saveNameBtn.disabled = true;
+    saveNameBtn.textContent = "Saving...";
+    
+    try {
+      // Create a unique document ID by removing spaces and making it lowercase
+      const safeId = currentPlayerName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      
+      // Save to the "players" collection
+      await setDoc(doc(db, "players", safeId), { name: currentPlayerName });
+      
+      saveNameBtn.textContent = "Saved! 🎉";
+      isGuestPlayer = false; // Prevent showing it again next round
+      
+      // Re-fetch players so they appear in the main dropdown immediately
+      loadPlayersFromFirebase();
+    } catch (error) {
+      console.error("Error saving name:", error);
+      saveNameBtn.textContent = "Error saving";
+      saveNameBtn.disabled = false;
+    }
+  });
+}
