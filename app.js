@@ -5,9 +5,32 @@ import { collection, getDocs, addDoc, setDoc, doc } from "https://www.gstatic.co
 // 1. GAME DEFINITIONS & STATE
 // ==========================================
 const FALLBACK_DATA = {
-  family_jokes: ["Dad's Sneezing", "The Dog's Breath", "Camping 2025", "Mom's Cooking", "Burnt Toast", "Roadtrip Songs"],
-  movies: ["Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park", "Shrek", "Moana"],
-  animals: ["Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin", "Kangaroo", "Cheetah"]
+  movies: [
+    "The Martian", "Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park", 
+    "Shrek", "Moana", "The Avengers", "Harry Potter", "Spider-Man", "The Lion King", 
+    "Avatar", "Inception", "Titanic", "Finding Nemo", "Back to the Future", "The Lord of the Rings", 
+    "E.T.", "Indiana Jones", "The Dark Knight", "Black Panther", "Gladiator", "The Terminator", 
+    "Ghostbusters", "The Incredibles", "Jaws", "Mulan", "Aladdin", "Up"
+  ],
+  animals: [
+    "Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin", "Kangaroo", "Cheetah", 
+    "Dragon", "Lion", "Tiger", "Bear", "Shark", "Dolphin", "Whale", "Monkey", 
+    "Gorilla", "Zebra", "Hippo", "Rhino", "Crocodile", "Snake", "Turtle", "Frog", 
+    "Owl", "Eagle", "Parrot", "Ostrich", "Camel", "Llama", "Octopus"
+  ],
+  sports: [
+    "Handball", "Basketball", "Soccer", "Baseball", "Tennis", "Volleyball", 
+    "Golf", "Swimming", "Track and Field", "Gymnastics", "Ice Hockey", "Table Tennis", 
+    "Badminton", "Boxing", "Wrestling", "Martial Arts", "Cycling", "Surfing", 
+    "Skateboarding", "Snowboarding", "Skiing", "Water Polo", "Rugby", "Cricket", 
+    "Fencing", "Archery", "Bowling", "Rowing", "Weightlifting", "Figure Skating"
+  ],
+  foods: [
+    "Pizza", "Cheeseburger", "Tacos", "Sushi", "Pasta", "Fried Chicken", "Steak", 
+    "Salad", "Ice Cream", "Chocolate", "Pancakes", "Waffles", "Bacon", "Eggs", 
+    "French Fries", "Hot Dog", "Sandwich", "Soup", "Burrito", "Nachos", "Curry", 
+    "Fried Rice", "Noodles", "Donut", "Cake", "Pie", "Cookie", "Popcorn", "Cheese", "Bread"
+  ]
 };
 
 let gameData = FALLBACK_DATA; 
