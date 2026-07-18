@@ -129,6 +129,11 @@ function initStage() {
     return;
   }
 
+  if (!categorySelect.value) {
+    alert("Please choose a category!");
+    return;
+  }
+  
   currentPlayerName = playerName;
   currentCategory = categorySelect.value;
   currentCategoryName = categorySelect.options[categorySelect.selectedIndex].text;
@@ -370,7 +375,7 @@ async function loadCategoriesFromFirebase() {
       gameData = {};
       
       // Clear both dropdowns
-      categorySelect.innerHTML = '';
+      categorySelect.innerHTML = '<option value="" disabled selected>Choose Category...</option>';
       
       // Keep the "ALL" option at the top of the leaderboard filter
       filterCategory.innerHTML = '<option value="ALL">Showing: All Categories</option>';
