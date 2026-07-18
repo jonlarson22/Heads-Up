@@ -47,6 +47,10 @@ let currentSkips = 0;
 let timerInterval = null;
 let isWaitingForRotation = false; 
 
+// Tilt Variables
+let tiltState = 'neutral';
+let isGameActive = false;
+
 // Audio Objects
 const beepSound = new Audio('sounds/countdown_beep.mp3');
 const finalBuzzer = new Audio('sounds/final_buzzer.mp3');
@@ -142,6 +146,18 @@ function drawNextCard() {
   cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
 }
 
+// Abstracted actions for buttons and tilt to share
+function handleSkipAction() {
+  currentSkips++;
+  drawNextCard();
+}
+
+function handleCorrectAction() {
+  currentScore++;
+  if (scoreValue) scoreValue.textContent = currentScore;
+  drawNextCard();
+}
+
 // ==========================================
 // 6. GAME STAGE LIFECYCLE
 // ==========================================
@@ -165,13 +181,13 @@ function initStage() {
   shuffledBag = [];
   clearInterval(timerInterval);
   isWaitingForRotation = false;
+  isGameActive = false; // Ensure tilt is disabled until countdown finishes
   
   progressBar.style.width = '100%';
   progressBar.classList.remove('warning');
   currentScore = 0;
   currentSkips = 0;
   
-  // CRITICAL FIX: Guarded against null crash
   if (scoreValue) scoreValue.textContent = '0';
   
   cardContent.innerHTML = `<h2 class="game-word">Place on forehead!</h2>`;
@@ -181,7 +197,6 @@ function initStage() {
   setView('stage'); 
 }
 
-// SMART GATEKEEPER: Enforces horizontal orientation
 function handleCountdownRequest() {
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
@@ -199,7 +214,6 @@ function handleCountdownRequest() {
   startPreGameCountdown();
 }
 
-// AUTO-WAKEUP: Listens to physical phone gyroscope rotation
 window.addEventListener('resize', () => {
   if (!isWaitingForRotation) return;
   if (window.innerWidth > window.innerHeight) {
@@ -233,6 +247,7 @@ function startPreGameCountdown() {
 
 function startActiveTimer() {
   controlsActive.classList.remove('hidden');
+  isGameActive = true; // Enable tilt controls
   drawNextCard();
   timeLeft = ROUND_DURATION;
 
@@ -249,6 +264,7 @@ function startActiveTimer() {
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
+      isGameActive = false; // Disable tilt controls
       progressBar.style.width = '0%'; 
       playSound(finalBuzzer);
       
@@ -266,7 +282,6 @@ function triggerRecap() {
   recapScoreValue.textContent = currentScore;
   recapPassStats.textContent = `${currentScore} Correct • ${currentSkips} Skips`;
 
-  // Handle the Save Name button visibility
   const saveNameBtn = document.getElementById('saveNameBtn');
   if (saveNameBtn) {
     if (isGuestPlayer) {
@@ -292,10 +307,8 @@ function triggerRecap() {
   setView('recap');
 }
 
-// Replace the old localStorage save with this Firestore push
 async function saveScoreRecord(record) {
   try {
-    // This will cache locally if offline, and sync to Firebase when online
     await addDoc(collection(db, "scores"), record);
     console.log("Score queued for Firebase!");
   } catch (error) {
@@ -306,7 +319,7 @@ async function saveScoreRecord(record) {
 // ==========================================
 // 7. LEADERBOARD ENGINE
 // ==========================================
-let DB_LEADERBOARD = []; // Replaces LOCAL_LEADERBOARD
+let DB_LEADERBOARD = []; 
 
 async function renderLeaderboard() {
   setView('leaderboard');
@@ -320,10 +333,8 @@ async function renderLeaderboard() {
       DB_LEADERBOARD.push(doc.data());
     });
     
-    // Sort highest to lowest
     DB_LEADERBOARD.sort((a, b) => b.score - a.score);
 
-    // NEW: Grab unique player names and build the dropdown
     const uniquePlayers = [...new Set(DB_LEADERBOARD.map(item => item.player))].sort();
     filterPlayer.innerHTML = '<option value="">All Players</option>';
     
@@ -346,7 +357,7 @@ async function renderLeaderboard() {
 
 function filterLeaderboardList() {
   const selectedCat = filterCategory.value;
-  const searchName = filterPlayer.value; // Exact match now
+  const searchName = filterPlayer.value; 
   
   leaderboardList.innerHTML = '';
 
@@ -370,7 +381,6 @@ function filterLeaderboardList() {
     const card = document.createElement('div');
     card.className = 'score-card';
     
-    // NEW: Clean, modern Flexbox layout
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
@@ -388,7 +398,7 @@ function filterLeaderboardList() {
 }
 
 // ==========================================
-// FIREBASE DATA INITIALIZATION
+// 8. FIREBASE DATA INITIALIZATION
 // ==========================================
 async function loadCategoriesFromFirebase() {
   try {
@@ -397,23 +407,18 @@ async function loadCategoriesFromFirebase() {
     if (!querySnapshot.empty) {
       gameData = {};
       
-      // Clear both dropdowns
       categorySelect.innerHTML = '<option value="" disabled selected>Choose Category...</option>';
-      
-      // Keep the "ALL" option at the top of the leaderboard filter
       filterCategory.innerHTML = '<option value="ALL">Showing: All Categories</option>';
 
       querySnapshot.forEach((doc) => {
         const catData = doc.data();
         gameData[doc.id] = catData.words;
 
-        // 1. Add to the main Lobby dropdown
         const lobbyOpt = document.createElement('option');
         lobbyOpt.value = doc.id;
         lobbyOpt.textContent = catData.name; 
         categorySelect.appendChild(lobbyOpt);
         
-        // 2. Add to the Leaderboard Filter dropdown
         const filterOpt = document.createElement('option');
         filterOpt.value = doc.id;
         filterOpt.textContent = catData.name;
@@ -434,24 +439,20 @@ async function loadPlayersFromFirebase() {
     const querySnapshot = await getDocs(collection(db, "players"));
 
     if (!querySnapshot.empty) {
-      // Clear the hardcoded options but keep the placeholder and Guest option
       playerSelect.innerHTML = `
         <option value="" disabled selected>Select player...</option>
         <option value="GUEST">➕ Guest (Type Name)...</option>
       `;
 
-      // Target the Guest option so we can insert names alphabetically above it
       const guestOption = playerSelect.querySelector('option[value="GUEST"]');
 
       querySnapshot.forEach((doc) => {
         const playerData = doc.data();
         
-        // Build the new player option
         const opt = document.createElement('option');
         opt.value = playerData.name;
         opt.textContent = playerData.name; 
         
-        // Insert it right above the Guest option
         playerSelect.insertBefore(opt, guestOption);
       });
       
@@ -463,28 +464,68 @@ async function loadPlayersFromFirebase() {
 }
 
 // ==========================================
-// 8. EVENT LISTENERS
+// 9. TILT CONTROLS ENGINE
 // ==========================================
-startBtn.addEventListener('click', initStage);
+function requestTiltPermission(callback) {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(permissionState => {
+        if (permissionState === 'granted') {
+          window.addEventListener('deviceorientation', handleTilt);
+        } else {
+          console.log("Tilt permissions denied. Falling back to buttons.");
+        }
+        callback();
+      })
+      .catch((err) => {
+        console.error("Error requesting tilt permission:", err);
+        callback(); // Launch game anyway
+      });
+  } else {
+    // Non-iOS 13+ devices
+    window.addEventListener('deviceorientation', handleTilt);
+    callback();
+  }
+}
+
+function handleTilt(event) {
+  if (!isGameActive) return; // Only trigger if the clock is actively running
+
+  const beta = event.beta;
+  if (beta === null) return;
+
+  // NEUTRAL: Phone is roughly vertical on forehead
+  if (beta > 60 && beta < 120) {
+    tiltState = 'neutral';
+  } 
+  // CORRECT: Tilt forward towards floor
+  else if (beta <= 45 && tiltState === 'neutral') {
+    tiltState = 'forward';
+    handleCorrectAction();
+  } 
+  // PASS: Tilt backward towards ceiling
+  else if (beta >= 135 && tiltState === 'neutral') {
+    tiltState = 'backward';
+    handleSkipAction();
+  }
+}
+
+// ==========================================
+// 10. EVENT LISTENERS
+// ==========================================
+// Wrap start buttons in the permission request
+startBtn.addEventListener('click', () => requestTiltPermission(initStage));
+playAgainBtn.addEventListener('click', () => requestTiltPermission(initStage));
+
 startTimerBtn.addEventListener('click', handleCountdownRequest);
+skipBtn.addEventListener('click', handleSkipAction);
+correctBtn.addEventListener('click', handleCorrectAction);
 
-skipBtn.addEventListener('click', () => {
-  currentSkips++;
-  drawNextCard();
-});
-
-correctBtn.addEventListener('click', () => {
-  currentScore++;
-  if (scoreValue) scoreValue.textContent = currentScore; // CRITICAL GUARD
-  drawNextCard();
-});
-
-playAgainBtn.addEventListener('click', initStage);
 changeModeBtn.addEventListener('click', () => {
   setView('lobby');
-  playerSelect.value = ""; // Forces dropdown back to "Select player..."
-  guestNameInput.value = ""; // Clears any previously typed guest name
-  guestNameInput.classList.add('hidden'); // Hides the guest box
+  playerSelect.value = ""; 
+  guestNameInput.value = ""; 
+  guestNameInput.classList.add('hidden'); 
 });
 
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
@@ -510,16 +551,13 @@ if (saveNameBtn) {
     saveNameBtn.textContent = "Saving...";
     
     try {
-      // Create a unique document ID by removing spaces and making it lowercase
       const safeId = currentPlayerName.toLowerCase().replace(/[^a-z0-9]/g, '_');
       
-      // Save to the "players" collection
       await setDoc(doc(db, "players", safeId), { name: currentPlayerName });
       
       saveNameBtn.textContent = "Saved! 🎉";
-      isGuestPlayer = false; // Prevent showing it again next round
+      isGuestPlayer = false; 
       
-      // Re-fetch players so they appear in the main dropdown immediately
       loadPlayersFromFirebase();
     } catch (error) {
       console.error("Error saving name:", error);
