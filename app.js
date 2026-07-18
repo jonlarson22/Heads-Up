@@ -6,10 +6,10 @@ import { collection, getDocs, addDoc, setDoc, doc } from "https://www.gstatic.co
 // ==========================================
 const FALLBACK_DATA = {
   movies: [
-    "The Martian", "Star Wars", "Frozen", "The Matrix", "Toy Story", "Jurassic Park", 
+    "The Martian", "Star Wars", "Frozen", "Project Hail Mary", "Toy Story", "Jurassic Park", 
     "Shrek", "Moana", "The Avengers", "Harry Potter", "Spider-Man", "The Lion King", 
-    "Avatar", "Inception", "Titanic", "Finding Nemo", "Back to the Future", "The Lord of the Rings", 
-    "E.T.", "Indiana Jones", "The Dark Knight", "Black Panther", "Gladiator", "The Terminator", 
+    "The Super Mario Movie", "Inception", "Titanic", "Finding Nemo", "Back to the Future", "The Lord of the Rings", 
+    "Pirates of the Caribbean", "Indiana Jones", "The Dark Knight", "Iron Man", "Gladiator", "The Terminator", 
     "Ghostbusters", "The Incredibles", "Jaws", "Mulan", "Aladdin", "Up"
   ],
   animals: [
@@ -35,8 +35,8 @@ const FALLBACK_DATA = {
 
 let gameData = FALLBACK_DATA; 
 let shuffledBag = [];
-let currentCategory = 'family_jokes';
-let currentCategoryName = 'Inside Jokes';
+let currentCategory = '';
+let currentCategoryName = '';
 let currentPlayerName = '';
 let isGuestPlayer = false;
 
