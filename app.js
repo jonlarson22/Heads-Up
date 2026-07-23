@@ -398,7 +398,7 @@ function filterLeaderboardList() {
 }
 
 // ==========================================
-// 8. FIREBASE DATA INITIALIZATION
+// 8. FIREBASE DATA INITIALIZATION (UPDATED FOR OFFLINE)
 // ==========================================
 async function loadCategoriesFromFirebase() {
   try {
@@ -406,7 +406,6 @@ async function loadCategoriesFromFirebase() {
 
     if (!querySnapshot.empty) {
       gameData = {};
-      
       categorySelect.innerHTML = '<option value="" disabled selected>Choose Category...</option>';
       filterCategory.innerHTML = '<option value="ALL">Showing: All Categories</option>';
 
@@ -425,12 +424,35 @@ async function loadCategoriesFromFirebase() {
         filterCategory.appendChild(filterOpt);
       });
       
-      console.log("Successfully loaded categories into both dropdowns!");
+      // 1. SAVE TO LOCALSTORAGE FOR OFFLINE USE
+      localStorage.setItem('cached_game_data', JSON.stringify(gameData));
+      localStorage.select_options_cache = categorySelect.innerHTML;
+      
+      console.log("Successfully loaded categories from Firebase and cached locally!");
     } else {
-      console.log("Firebase is empty. Using fallback data.");
+      console.log("Firebase is empty. Checking local cache or fallback.");
+      loadFallbackCategories();
     }
   } catch (error) {
-    console.warn("Could not connect to Firebase (Offline?). Using fallback data.", error);
+    console.warn("Offline! Could not connect to Firebase. Loading from local cache...", error);
+    loadFallbackCategories();
+  }
+}
+
+// Helper function to handle offline fallback gracefully
+function loadFallbackCategories() {
+  const cachedData = localStorage.getItem('cached_game_data');
+  const cachedOptions = localStorage.getItem('select_options_cache');
+
+  if (cachedData && cachedOptions) {
+    // We have previously downloaded Firebase data! Use it!
+    gameData = JSON.parse(cachedData);
+    categorySelect.innerHTML = cachedOptions;
+    console.log("Loaded categories from Offline LocalStorage!");
+  } else {
+    // First time ever opening app and offline? Use the hardcoded FALLBACK_DATA
+    gameData = FALLBACK_DATA;
+    console.log("No local cache found. Using hardcoded FALLBACK_DATA.");
   }
 }
 
@@ -445,9 +467,11 @@ async function loadPlayersFromFirebase() {
       `;
 
       const guestOption = playerSelect.querySelector('option[value="GUEST"]');
+      const playerNames = [];
 
       querySnapshot.forEach((doc) => {
         const playerData = doc.data();
+        playerNames.push(playerData.name);
         
         const opt = document.createElement('option');
         opt.value = playerData.name;
@@ -456,10 +480,23 @@ async function loadPlayersFromFirebase() {
         playerSelect.insertBefore(opt, guestOption);
       });
       
-      console.log("Successfully loaded players from Firebase!");
+      // Save player list to offline cache
+      localStorage.setItem('cached_players', JSON.stringify(playerNames));
+      console.log("Successfully loaded players and cached locally!");
     }
   } catch (error) {
-    console.warn("Could not connect to Firebase for players.", error);
+    console.warn("Offline! Loading players from local cache...", error);
+    const cachedPlayers = localStorage.getItem('cached_players');
+    if (cachedPlayers) {
+      const names = JSON.parse(cachedPlayers);
+      const guestOption = playerSelect.querySelector('option[value="GUEST"]');
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        playerSelect.insertBefore(opt, guestOption);
+      });
+    }
   }
 }
 
