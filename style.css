@@ -88,7 +88,7 @@ body {
 .card-stage { flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 0; }
 
 .flashcard {
-  flex: 1; /* <-- Add this to force consistent height */
+  flex: 1; 
   width: 100%; 
   height: 100%; 
   background: var(--card-bg); 
@@ -102,7 +102,18 @@ body {
   overflow: hidden;
 }
 
-.game-word { font-size: clamp(3rem, 12vw, 5rem); font-weight: 900; color: var(--text-main); text-align: center; line-height: 1.1; padding: 0 10px; }
+/* Kill default browser margins that secretly push the card open */
+.game-word { 
+  font-size: clamp(3rem, 12vw, 5rem); 
+  font-weight: 900; 
+  color: var(--text-main); 
+  text-align: center; 
+  line-height: 1.1; 
+  padding: 0 10px;
+  margin: 0 !important;
+  width: 100%;
+  word-wrap: break-word;
+}
 
 /* --- 3, 2, 1 COUNTDOWN ANIMATION --- */
 .countdown-text { font-size: 6rem; color: var(--primary); animation: pop 1s ease-in-out infinite; }
@@ -146,12 +157,45 @@ body {
 .recap-score span { font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1; }
 
 /* ==========================================
-   LANDSCAPE STAGE & EDGE TIMER
+   LANDSCAPE STAGE & EDGE TIMER (LOCKED BOX)
    ========================================== */
 .stage-landscape-view { padding: 10px !important; position: relative; justify-content: space-between; }
-.landscape-card-stage { flex: 1; width: 100%; margin-bottom: 12px; }
-.landscape-flashcard { border-width: 12px; border-radius: 36px; }
-.stage-landscape-view .game-word { font-size: clamp(3.5rem, 14vw, 7.5rem); }
+
+.landscape-card-stage { 
+  flex: 1; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%; 
+  max-height: 60vh; /* Strictly lock maximum screen height */
+  padding: 10px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.landscape-flashcard { 
+  width: 95%;
+  height: 100%;
+  max-height: 250px; /* Never allow the card box to grow taller than this! */
+  border-width: 12px; 
+  border-radius: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 15px 20px;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent text from spilling out */
+}
+
+/* Let app.js handle the font sizing dynamically without CSS clamp() fighting it */
+.stage-landscape-view .game-word { 
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  word-wrap: break-word;
+}
+
 .landscape-controls-area { width: 100%; padding-bottom: 16px; z-index: 10; }
 .bottom-edge-timer { position: absolute; bottom: 0; left: 0; width: 100%; height: 16px; border-radius: 0; background: #E0E1E6; }
 .bottom-edge-timer .progress-bar { border-radius: 0; }
