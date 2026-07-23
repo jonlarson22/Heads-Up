@@ -159,24 +159,29 @@ body {
 /* ==========================================
    LANDSCAPE STAGE & EDGE TIMER (LOCKED BOX)
    ========================================== */
-.stage-landscape-view { padding: 10px !important; position: relative; justify-content: space-between; }
+.stage-landscape-view { 
+  padding: 12px 16px !important; 
+  position: relative; 
+  justify-content: space-between;
+  gap: 10px;
+}
 
 .landscape-card-stage { 
-  flex: 1; 
+  flex: 1 1 0%; 
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%; 
-  max-height: 80vh; /* BUMPED UP FROM 60vh: Gives 20% of the screen height right back to the card! */
-  padding: 8px;
-  margin-bottom: 6px;
+  min-height: 0; /* CSS Flexbox secret: allows card to fill 100% of remaining height without pushing controls! */
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
 .landscape-flashcard { 
-  width: 96%;
+  width: 100%; /* Changed from 96% to fill the width */
   height: 100%;
-  max-height: 350px; /* BUMPED UP FROM 250px: Lets the box become nice and meaty again! */
+  min-height: 0; /* Removes the 350px ceiling so the box becomes grand and meaty again! */
   border-width: 12px; 
   border-radius: 36px;
   display: flex;
@@ -185,8 +190,9 @@ body {
   text-align: center;
   padding: 15px 25px;
   box-sizing: border-box;
-  overflow: hidden; /* Still keeps text safe inside if a word is massive */
+  overflow: hidden; 
 }
+
 /* Let app.js handle the font sizing dynamically without CSS clamp() fighting it */
 .stage-landscape-view .game-word { 
   width: 100%;
@@ -216,3 +222,11 @@ body {
 .score-card .date-stamp { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 4px; }
 .filter-container { width: 100%; margin-bottom: 10px; }
 .guest-input { margin-top: 10px; }
+
+
+/* Allow game stage to use full phone screen width when turned sideways */
+@media (orientation: landscape) {
+  .app-container {
+    max-width: 100% !important;
+  }
+}
