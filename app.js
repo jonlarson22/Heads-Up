@@ -143,7 +143,22 @@ function drawNextCard() {
     shuffleArray(shuffledBag);
   }
   const nextWord = shuffledBag.pop();
-  cardContent.innerHTML = `<h2 class="game-word">${nextWord}</h2>`;
+  
+  // 1. Calculate dynamic font size based on character count
+  let fontSize = "3.8rem"; // Default for short titles (e.g., "Frozen", "Up")
+  
+  if (nextWord.length > 22) {
+    fontSize = "2.2rem"; // Long titles (e.g., "Pirates of the Caribbean")
+  } else if (nextWord.length > 13) {
+    fontSize = "2.8rem"; // Medium titles (e.g., "Dancing with the Stars")
+  }
+
+  // 2. Inject word with dynamic sizing, tight line-height, and zero margins
+  cardContent.innerHTML = `
+    <h2 class="game-word" style="font-size: ${fontSize}; line-height: 1.15; margin: 0; padding: 0; transition: font-size 0.2s ease;">
+      ${nextWord}
+    </h2>
+  `;
 }
 
 // Abstracted actions for buttons and tilt to share
