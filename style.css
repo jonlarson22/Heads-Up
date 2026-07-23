@@ -167,27 +167,26 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%; 
-  max-height: 60vh; /* Strictly lock maximum screen height */
-  padding: 10px;
-  margin-bottom: 12px;
+  max-height: 80vh; /* BUMPED UP FROM 60vh: Gives 20% of the screen height right back to the card! */
+  padding: 8px;
+  margin-bottom: 6px;
   box-sizing: border-box;
 }
 
 .landscape-flashcard { 
-  width: 95%;
+  width: 96%;
   height: 100%;
-  max-height: 250px; /* Never allow the card box to grow taller than this! */
+  max-height: 350px; /* BUMPED UP FROM 250px: Lets the box become nice and meaty again! */
   border-width: 12px; 
   border-radius: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 15px 20px;
+  padding: 15px 25px;
   box-sizing: border-box;
-  overflow: hidden; /* Prevent text from spilling out */
+  overflow: hidden; /* Still keeps text safe inside if a word is massive */
 }
-
 /* Let app.js handle the font sizing dynamically without CSS clamp() fighting it */
 .stage-landscape-view .game-word { 
   width: 100%;
