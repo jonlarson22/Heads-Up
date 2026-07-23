@@ -464,7 +464,7 @@ async function loadPlayersFromFirebase() {
 }
 
 // ==========================================
-// 9. TILT CONTROLS ENGINE
+// 9. TILT CONTROLS ENGINE (UPDATED)
 // ==========================================
 function requestTiltPermission(callback) {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -489,24 +489,51 @@ function requestTiltPermission(callback) {
 }
 
 function handleTilt(event) {
-  if (!isGameActive) return; // Only trigger if the clock is actively running
+  if (!isGameActive) return; // Only trigger if the active game clock is running
 
   const beta = event.beta;
-  if (beta === null) return;
+  const gamma = event.gamma;
+  if (beta === null || gamma === null) return;
 
-  // NEUTRAL: Phone is roughly vertical on forehead
-  if (beta > 60 && beta < 120) {
-    tiltState = 'neutral';
-  } 
-  // CORRECT: Tilt forward towards floor
-  else if (beta <= 45 && tiltState === 'neutral') {
-    tiltState = 'forward';
-    handleCorrectAction();
-  } 
-  // PASS: Tilt backward towards ceiling
-  else if (beta >= 135 && tiltState === 'neutral') {
-    tiltState = 'backward';
-    handleSkipAction();
+  // 1. Detect if the phone is currently in Landscape or Portrait
+  const isLandscape = window.innerWidth > window.innerHeight;
+
+  if (isLandscape) {
+    // --- LANDSCAPE MODE (Heads-Up Style) ---
+    // In landscape, front-to-back tilt is tracked by GAMMA.
+    // Upright on forehead means Math.abs(gamma) is high (roughly 55° to 90°).
+    if (Math.abs(gamma) > 55) {
+      tiltState = 'neutral';
+    } 
+    else if (Math.abs(gamma) < 40 && tiltState === 'neutral') {
+      // Check which way the phone is rotated (top pointing left vs right)
+      const angle = window.orientation ?? (screen.orientation ? screen.orientation.angle : 90);
+      const isTopLeft = angle === 90;
+
+      // If top edge is left, dipping toward floor makes gamma negative (-40 to 0).
+      // If top edge is right (angle 270 or -90), dipping toward floor makes gamma positive (0 to 40).
+      const isTiltingForward = isTopLeft ? (gamma < 0) : (gamma > 0);
+
+      if (isTiltingForward) {
+        tiltState = 'forward';
+        handleCorrectAction();
+      } else {
+        tiltState = 'backward';
+        handleSkipAction();
+      }
+    }
+  } else {
+    // --- PORTRAIT MODE FALLBACK ---
+    // In portrait, front-to-back tilt is tracked by BETA.
+    if (beta > 60 && beta < 120) {
+      tiltState = 'neutral';
+    } else if (beta <= 45 && tiltState === 'neutral') {
+      tiltState = 'forward';
+      handleCorrectAction();
+    } else if (beta >= 135 && tiltState === 'neutral') {
+      tiltState = 'backward';
+      handleSkipAction();
+    }
   }
 }
 
