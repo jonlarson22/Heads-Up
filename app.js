@@ -502,10 +502,10 @@ function handleTilt(event) {
     // --- LANDSCAPE MODE (Heads-Up Style) ---
     // In landscape, front-to-back tilt is tracked by GAMMA.
     // Upright on forehead means Math.abs(gamma) is high (roughly 55° to 90°).
-    if (Math.abs(gamma) > 55) {
+    if (Math.abs(gamma) > 65) {
       tiltState = 'neutral';
     } 
-    else if (Math.abs(gamma) < 40 && tiltState === 'neutral') {
+    else if (Math.abs(gamma) < 30 && tiltState === 'neutral') {
       // Check which way the phone is rotated (top pointing left vs right)
       const angle = window.orientation ?? (screen.orientation ? screen.orientation.angle : 90);
       const isTopLeft = angle === 90;
@@ -545,8 +545,8 @@ startBtn.addEventListener('click', () => requestTiltPermission(initStage));
 playAgainBtn.addEventListener('click', () => requestTiltPermission(initStage));
 
 startTimerBtn.addEventListener('click', handleCountdownRequest);
-skipBtn.addEventListener('click', handleSkipAction);
-correctBtn.addEventListener('click', handleCorrectAction);
+if (skipBtn) skipBtn.addEventListener('click', handleSkipAction);
+if (correctBtn) correctBtn.addEventListener('click', handleCorrectAction);
 
 changeModeBtn.addEventListener('click', () => {
   setView('lobby');
