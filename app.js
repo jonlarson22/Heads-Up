@@ -4,36 +4,11 @@ import { collection, getDocs, addDoc, setDoc, doc } from "https://www.gstatic.co
 // ==========================================
 // 1. GAME DEFINITIONS & STATE
 // ==========================================
-const FALLBACK_DATA = {
-  movies: [
-    "The Martian", "Star Wars", "Frozen", "Project Hail Mary", "Toy Story", "Jurassic Park", 
-    "Shrek", "Moana", "The Avengers", "Harry Potter", "Spider-Man", "The Lion King", 
-    "The Super Mario Movie", "Inception", "Titanic", "Finding Nemo", "Back to the Future", "The Lord of the Rings", 
-    "Pirates of the Caribbean", "Indiana Jones", "The Dark Knight", "Iron Man", "Gladiator", "The Terminator", 
-    "Ghostbusters", "The Incredibles", "Jaws", "Mulan", "Aladdin", "Up"
-  ],
-  animals: [
-    "Elephant", "Giraffe", "Sloth", "T-Rex", "Penguin", "Kangaroo", "Cheetah", 
-    "Dragon", "Lion", "Tiger", "Bear", "Shark", "Dolphin", "Whale", "Monkey", 
-    "Gorilla", "Zebra", "Hippo", "Rhino", "Crocodile", "Snake", "Turtle", "Frog", 
-    "Owl", "Eagle", "Parrot", "Ostrich", "Camel", "Llama", "Octopus"
-  ],
-  sports: [
-    "Handball", "Basketball", "Soccer", "Baseball", "Tennis", "Volleyball", 
-    "Golf", "Swimming", "Track and Field", "Gymnastics", "Ice Hockey", "Table Tennis", 
-    "Badminton", "Boxing", "Wrestling", "Martial Arts", "Cycling", "Surfing", 
-    "Skateboarding", "Snowboarding", "Skiing", "Water Polo", "Rugby", "Cricket", 
-    "Fencing", "Archery", "Bowling", "Rowing", "Weightlifting", "Figure Skating"
-  ],
-  foods: [
-    "Pizza", "Cheeseburger", "Tacos", "Sushi", "Pasta", "Fried Chicken", "Steak", 
-    "Salad", "Ice Cream", "Chocolate", "Pancakes", "Waffles", "Bacon", "Eggs", 
-    "French Fries", "Hot Dog", "Sandwich", "Soup", "Burrito", "Nachos", "Curry", 
-    "Fried Rice", "Noodles", "Donut", "Cake", "Pie", "Cookie", "Popcorn", "Cheese", "Bread"
-  ]
-};
+// Categories come from Firestore (cached to localStorage for offline).
+// There is no hardcoded fallback: the game needs at least one online
+// visit to cache the real categories.
 
-let gameData = FALLBACK_DATA; 
+let gameData = {}; 
 let shuffledBag = [];
 let currentCategory = '';
 let currentCategoryName = '';
@@ -45,10 +20,10 @@ let timeLeft = 60;
 let currentScore = 0;
 let currentSkips = 0; 
 let timerInterval = null;
-let isWaitingForRotation = false; 
+let isWaitingForRotation = false;
+let countdownRunning = false; // guards against double-tap starting two timers
 
-// Tilt Variables
-let tiltState = 'neutral';
+// Tilt state (gravity-vector engine, see section 9)
 let isGameActive = false;
 
 // Audio Objects
@@ -191,12 +166,25 @@ function initStage() {
   currentPlayerName = playerName;
   currentCategory = categorySelect.value;
   currentCategoryName = categorySelect.options[categorySelect.selectedIndex].text;
+
+  if (!gameData[currentCategory] || gameData[currentCategory].length === 0) {
+    alert("No words loaded for that category yet. Connect to the internet once so the categories can download, then try again.");
+    return;
+  }
+
   localStorage.setItem('last_player', playerSelect.value);
 
   shuffledBag = [];
   clearInterval(timerInterval);
+  countdownRunning = false;
   isWaitingForRotation = false;
   isGameActive = false; // Ensure tilt is disabled until countdown finishes
+
+  // Recalibrate the tilt engine for whoever is holding the phone now
+  baselineGx = null;
+  baselineGz = null;
+  tiltArmed = true;
+  lastTiltAt = 0;
   
   progressBar.style.width = '100%';
   progressBar.classList.remove('warning');
@@ -238,6 +226,9 @@ window.addEventListener('resize', () => {
 });
 
 function startPreGameCountdown() {
+  if (countdownRunning) return; // ignore double-taps
+  countdownRunning = true;
+
   controlsPreStart.classList.add('hidden');
   let count = 3;
 
@@ -252,6 +243,7 @@ function startPreGameCountdown() {
       count--;
     } else {
       clearInterval(countdownInterval);
+      countdownRunning = false;
       cardContent.innerHTML = `<h2 class="game-word countdown-text" style="color: #06D6A0;">GO!</h2>`;
       playSound(startBuzzer);
       
@@ -322,12 +314,54 @@ function triggerRecap() {
   setView('recap');
 }
 
+const SCORE_OUTBOX_KEY = 'score_outbox';
+const SCORE_OUTBOX_MAX = 200;
+
+function queueScoreOffline(record) {
+  try {
+    const box = JSON.parse(localStorage.getItem(SCORE_OUTBOX_KEY) || '[]');
+    box.push(record);
+    localStorage.setItem(SCORE_OUTBOX_KEY, JSON.stringify(box.slice(-SCORE_OUTBOX_MAX)));
+  } catch (e) {
+    console.warn('Could not queue score offline:', e);
+  }
+}
+
+async function flushScoreOutbox() {
+  let box = [];
+  try {
+    box = JSON.parse(localStorage.getItem(SCORE_OUTBOX_KEY) || '[]');
+  } catch (e) {
+    return;
+  }
+  if (!box.length) return;
+
+  const remaining = [];
+  for (const record of box) {
+    try {
+      await addDoc(collection(db, "scores"), record);
+    } catch (e) {
+      // Still offline: keep the rest queued, try again next time
+      remaining.push(record);
+      break;
+    }
+  }
+  try {
+    localStorage.setItem(SCORE_OUTBOX_KEY, JSON.stringify(remaining));
+  } catch (e) { /* storage full; drop it */ }
+  if (box.length !== remaining.length) {
+    console.log(`Uploaded ${box.length - remaining.length} queued score(s) to Firebase.`);
+  }
+}
+
 async function saveScoreRecord(record) {
   try {
     await addDoc(collection(db, "scores"), record);
-    console.log("Score queued for Firebase!");
+    console.log("Score saved to Firebase!");
+    flushScoreOutbox(); // piggyback: we're online, drain anything queued
   } catch (error) {
-    console.error("Error saving score:", error);
+    console.warn("Offline: queuing score for later upload.", error);
+    queueScoreOffline(record);
   }
 }
 
@@ -396,20 +430,28 @@ function filterLeaderboardList() {
     const card = document.createElement('div');
     card.className = 'score-card';
     
+    // Player names are user input: escape before injecting into HTML
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <div style="display: flex; flex-direction: column; gap: 4px; text-align: left;">
-          <span style="font-size: 1.3rem; font-weight: 800; color: #333; line-height: 1;">${entry.player}</span>
-          <span style="font-size: 0.85rem; color: #888; font-weight: 500;">${entry.catName}</span>
+          <span style="font-size: 1.3rem; font-weight: 800; color: #333; line-height: 1;">${esc(entry.player)}</span>
+          <span style="font-size: 0.85rem; color: #888; font-weight: 500;">${esc(entry.catName)}</span>
         </div>
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right;">
-          <span style="font-size: 1.8rem; font-weight: 900; color: #8A2BE2; line-height: 1;">${entry.score}</span>
-          <span style="font-size: 0.75rem; color: #aaa;">${entry.date || 'Recent'} • ${skipCount} Skips</span>
+          <span style="font-size: 1.8rem; font-weight: 900; color: #8A2BE2; line-height: 1;">${Number(entry.score) || 0}</span>
+          <span style="font-size: 0.75rem; color: #aaa;">${esc(entry.date) || 'Recent'} • ${Number(skipCount) || 0} Skips</span>
         </div>
       </div>
     `;
     leaderboardList.appendChild(card);
   });
+}
+
+// Escape user-supplied text before injecting into innerHTML
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 // ==========================================
@@ -441,7 +483,9 @@ async function loadCategoriesFromFirebase() {
       
       // 1. SAVE TO LOCALSTORAGE FOR OFFLINE USE
       localStorage.setItem('cached_game_data', JSON.stringify(gameData));
-      localStorage.select_options_cache = categorySelect.innerHTML;
+      localStorage.setItem('select_options_cache', categorySelect.innerHTML);
+
+      flushScoreOutbox(); // we're online: upload any scores queued while offline
       
       console.log("Successfully loaded categories from Firebase and cached locally!");
     } else {
@@ -454,7 +498,8 @@ async function loadCategoriesFromFirebase() {
   }
 }
 
-// Helper function to handle offline fallback gracefully
+// Loads categories from the offline cache. There is no hardcoded fallback:
+// the game needs at least one online visit to download the real categories.
 function loadFallbackCategories() {
   const cachedData = localStorage.getItem('cached_game_data');
   const cachedOptions = localStorage.getItem('select_options_cache');
@@ -465,9 +510,11 @@ function loadFallbackCategories() {
     categorySelect.innerHTML = cachedOptions;
     console.log("Loaded categories from Offline LocalStorage!");
   } else {
-    // First time ever opening app and offline? Use the hardcoded FALLBACK_DATA
-    gameData = FALLBACK_DATA;
-    console.log("No local cache found. Using hardcoded FALLBACK_DATA.");
+    // First run ever and offline: nothing to play with yet.
+    gameData = {};
+    categorySelect.innerHTML = '<option value="" disabled selected>Choose Category...</option>'
+      + '<option value="" disabled>Offline: connect to the internet once to download categories</option>';
+    console.log("No local cache found and offline. Categories will load on next online visit.");
   }
 }
 
@@ -516,85 +563,107 @@ async function loadPlayersFromFirebase() {
 }
 
 // ==========================================
-// 9. TILT CONTROLS ENGINE (UPDATED)
+// 9. TILT CONTROLS ENGINE (gravity vector)
+//
+// The old gamma-threshold engine could not work: in landscape the phone
+// sits at the deviceorientation gimbal-lock singularity (gamma ≈ ±90),
+// so a nod-down and a nod-up produce identical gamma readings and the
+// direction check was dead logic (pass was unreachable in normal play).
+//
+// This engine uses devicemotion's gravity vector instead. A nod rotates
+// the phone about its top-to-bottom axis, which swings the device-Z
+// gravity component (gz) one way or the other. We compare gz against a
+// slow-moving baseline (adapts to grip/lean, frozen mid-gesture) and use
+// the baseline gx sign so "down" is correct no matter which way the
+// player faces or which landscape direction the phone is in.
 // ==========================================
-function requestTiltPermission(callback) {
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-      .then(permissionState => {
-        if (permissionState === 'granted') {
-          window.addEventListener('deviceorientation', handleTilt);
-        } else {
-          console.log("Tilt permissions denied. Falling back to buttons.");
-        }
-        callback();
+const TILT_TRIGGER = 0.45;   // nod depth (fraction of g) that scores
+const TILT_REARM = 0.22;      // must return this close to baseline to re-arm
+const TILT_DEBOUNCE_MS = 350;
+const VERTICAL_MIN = 0.45;   // |gx|/g must exceed this (phone roughly upright)
+
+let motionListenerAttached = false;
+let baselineGx = null;
+let baselineGz = null;
+let tiltArmed = true;
+let lastTiltAt = 0;
+
+function requestMotionPermission(callback) {
+  const done = () => {
+    attachMotionListener();
+    callback();
+  };
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    // iOS 13+: motion needs an explicit gesture-triggered grant
+    DeviceMotionEvent.requestPermission()
+      .then(state => {
+        if (state !== 'granted') console.log('Motion permission denied. Tilt controls disabled.');
+        done();
       })
-      .catch((err) => {
-        console.error("Error requesting tilt permission:", err);
-        callback(); // Launch game anyway
+      .catch(err => {
+        console.error('Motion permission error:', err);
+        done(); // Launch game anyway
       });
   } else {
-    // Non-iOS 13+ devices
-    window.addEventListener('deviceorientation', handleTilt);
-    callback();
+    // Android / desktop: no permission API, just listen
+    done();
   }
 }
 
-function handleTilt(event) {
-  if (!isGameActive) return; // Only trigger if the active game clock is running
+function attachMotionListener() {
+  if (motionListenerAttached) return; // attach once; isGameActive gates scoring
+  motionListenerAttached = true;
+  window.addEventListener('devicemotion', handleMotion);
+}
 
-  const beta = event.beta;
-  const gamma = event.gamma;
-  if (beta === null || gamma === null) return;
+function handleMotion(event) {
+  if (!isGameActive) return; // Only score while the game clock is running
 
-  // 1. Detect if the phone is currently in Landscape or Portrait
-  const isLandscape = window.innerWidth > window.innerHeight;
+  const acc = event.accelerationIncludingGravity;
+  if (!acc || acc.x === null || acc.z === null) return;
 
-  if (isLandscape) {
-    // --- LANDSCAPE MODE (Heads-Up Style) ---
-    // In landscape, front-to-back tilt is tracked by GAMMA.
-    // Upright on forehead means Math.abs(gamma) is high (roughly 55° to 90°).
-    if (Math.abs(gamma) > 65) {
-      tiltState = 'neutral';
-    } 
-    else if (Math.abs(gamma) < 30 && tiltState === 'neutral') {
-      // Check which way the phone is rotated (top pointing left vs right)
-      const angle = window.orientation ?? (screen.orientation ? screen.orientation.angle : 90);
-      const isTopLeft = angle === 90;
+  const gx = acc.x;
+  const gz = acc.z;
+  const gEst = Math.hypot(gx, acc.y || 0, gz) || 9.81;
 
-      // If top edge is left, dipping toward floor makes gamma negative (-40 to 0).
-      // If top edge is right (angle 270 or -90), dipping toward floor makes gamma positive (0 to 40).
-      const isTiltingForward = isTopLeft ? (gamma < 0) : (gamma > 0);
+  if (baselineGx === null) {
+    baselineGx = gx;
+    baselineGz = gz;
+  }
 
-      if (isTiltingForward) {
-        tiltState = 'forward';
-        handleCorrectAction();
-      } else {
-        tiltState = 'backward';
-        handleSkipAction();
-      }
-    }
-  } else {
-    // --- PORTRAIT MODE FALLBACK ---
-    // In portrait, front-to-back tilt is tracked by BETA.
-    if (beta > 60 && beta < 120) {
-      tiltState = 'neutral';
-    } else if (beta <= 45 && tiltState === 'neutral') {
-      tiltState = 'forward';
-      handleCorrectAction();
-    } else if (beta >= 135 && tiltState === 'neutral') {
-      tiltState = 'backward';
-      handleSkipAction();
-    }
+  // Adapt the baseline only while armed (near neutral). Freezing it
+  // mid-gesture means holding a tilt can't re-baseline and then
+  // misfire the opposite action on the way back.
+  if (tiltArmed) {
+    const adapt = 0.02;
+    baselineGx += (gx - baselineGx) * adapt;
+    baselineGz += (gz - baselineGz) * adapt;
+  }
+
+  const dz = (gz - baselineGz) / gEst;
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
+  if (tiltArmed
+      && Math.abs(dz) > TILT_TRIGGER
+      && Math.abs(gx) / gEst > VERTICAL_MIN
+      && now - lastTiltAt > TILT_DEBOUNCE_MS) {
+    // Nod-down swings gz opposite to the baseline gx side.
+    const isDown = dz * baselineGx < 0;
+    tiltArmed = false;
+    lastTiltAt = now;
+    if (isDown) handleCorrectAction();
+    else handleSkipAction();
+  } else if (!tiltArmed && Math.abs(dz) < TILT_REARM) {
+    tiltArmed = true;
   }
 }
 
 // ==========================================
 // 10. EVENT LISTENERS
 // ==========================================
-// Wrap start buttons in the permission request
-startBtn.addEventListener('click', () => requestTiltPermission(initStage));
-playAgainBtn.addEventListener('click', () => requestTiltPermission(initStage));
+// Wrap start buttons in the motion permission request
+startBtn.addEventListener('click', () => requestMotionPermission(initStage));
+playAgainBtn.addEventListener('click', () => requestMotionPermission(initStage));
 
 startTimerBtn.addEventListener('click', handleCountdownRequest);
 if (skipBtn) skipBtn.addEventListener('click', handleSkipAction);
@@ -621,7 +690,19 @@ filterPlayer.addEventListener('change', filterLeaderboardList);
 window.addEventListener('DOMContentLoaded', async () => {
   await loadCategoriesFromFirebase();
   await loadPlayersFromFirebase();
+  restoreLastPlayer();
 });
+
+// Pre-select whoever played last, if they're still in the list
+function restoreLastPlayer() {
+  const last = localStorage.getItem('last_player');
+  if (!last) return;
+  const match = [...playerSelect.options].some(opt => opt.value === last);
+  if (match) {
+    playerSelect.value = last;
+    if (last === 'GUEST') guestNameInput.classList.remove('hidden');
+  }
+}
 
 const saveNameBtn = document.getElementById('saveNameBtn');
 if (saveNameBtn) {
