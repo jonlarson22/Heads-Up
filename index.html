@@ -22,21 +22,13 @@
         <label for="playerSelect">Who is playing?</label>
         <select id="playerSelect" class="styled-select">
           <option value="" disabled selected>Select player...</option>
-          <option value="Jonathan">Jonathan</option>
-          <option value="Mom">Mom</option>
-          <option value="Dad">Dad</option>
-          <option value="Other">Other</option>
-          <option value="GUEST">➕ Guest</option>
+          <option value="GUEST">➕ Guest (Type Name)...</option>
         </select>
         <input type="text" id="guestNameInput" class="guest-input styled-input hidden" placeholder="Type guest name...">
 
         <label for="categorySelect" style="margin-top: 24px;">Categories:</label>
         <select id="categorySelect" class="styled-select">
           <option value="" disabled selected>Choose Category...</option>
-          <option value="movies">🍿 Movie Night</option>
-          <option value="animals">🦁 Silly Animals</option>
-          <option value="sports">🏈 Sports</option>
-          <option value="foods">🍔 Foods</option>
         </select>
       </div>
 
@@ -102,10 +94,6 @@
       <div class="filter-container">
         <select id="filterCategory" class="styled-select" style="padding: 12px 16px; font-size: 1rem;">
           <option value="ALL">Showing: All Categories</option>
-          <option value="movies">Movie Night</option>
-          <option value="animals">Silly Animals</option>
-          <option value="sports">Sports</option>
-          <option value="foods">Foods</option>
         </select>
 
         <select id="filterPlayer" class="styled-select" style="margin-top: 10px; padding: 12px 16px; font-size: 1rem;">
