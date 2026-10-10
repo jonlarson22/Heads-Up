@@ -53,6 +53,7 @@ const progressBar = document.getElementById('progressBar');
 const controlsPreStart = document.getElementById('controlsPreStart');
 const controlsActive = document.getElementById('controlsActive');
 const startTimerBtn = document.getElementById('startTimerBtn');
+const stageBackBtn = document.getElementById('stageBackBtn');
 const skipBtn = document.getElementById('skipBtn');
 const correctBtn = document.getElementById('correctBtn');
 
@@ -616,6 +617,14 @@ function attachMotionListener() {
   window.addEventListener('devicemotion', handleMotion);
 }
 
+// Haptic nudge so the holder knows their tilt registered (they can't see
+// the screen). Android only; iPhones silently ignore vibrate().
+function buzz(pattern) {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
+  } catch (e) { /* unsupported */ }
+}
+
 function handleMotion(event) {
   if (!isGameActive) return; // Only score while the game clock is running
 
@@ -651,6 +660,7 @@ function handleMotion(event) {
     const isDown = dz * baselineGx < 0;
     tiltArmed = false;
     lastTiltAt = now;
+    buzz(isDown ? 25 : [30, 50, 30]);
     if (isDown) handleCorrectAction();
     else handleSkipAction();
   } else if (!tiltArmed && Math.abs(dz) < TILT_REARM) {
@@ -666,6 +676,13 @@ startBtn.addEventListener('click', () => requestMotionPermission(initStage));
 playAgainBtn.addEventListener('click', () => requestMotionPermission(initStage));
 
 startTimerBtn.addEventListener('click', handleCountdownRequest);
+
+// Back out of the stage before the countdown starts (wrong player/category picked)
+if (stageBackBtn) stageBackBtn.addEventListener('click', () => {
+  isWaitingForRotation = false;
+  countdownRunning = false;
+  setView('lobby');
+});
 if (skipBtn) skipBtn.addEventListener('click', handleSkipAction);
 if (correctBtn) correctBtn.addEventListener('click', handleCorrectAction);
 
