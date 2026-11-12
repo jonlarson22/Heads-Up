@@ -1,6 +1,6 @@
 // Bump this version on EVERY static-asset change (CSS/JS/HTML), or phones
 // will keep serving stale files from the cache indefinitely.
-const CACHE_NAME = 'headsup-v4';
+const CACHE_NAME = 'headsup-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
