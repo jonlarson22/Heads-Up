@@ -355,10 +355,18 @@ function startActiveTimer() {
   }, 1000);
 }
 
+// Release the landscape lock from Tap to Begin. Called at Time's Up and
+// on every exit path (back to lobby, page closing) so the app can never
+// strand the phone sideways — the manifest no longer locks orientation
+// app-wide; the lock belongs to the round only.
+function unlockOrientation() {
+  try {
+    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+  } catch (e) { /* not locked / unsupported */ }
+}
+
 function triggerRecap() {
-  if (screen.orientation && screen.orientation.unlock) {
-    screen.orientation.unlock();
-  }
+  unlockOrientation();
 
   recapPlayerName.textContent = `${currentPlayerName}'s Round`;
   recapScoreValue.textContent = currentScore;
@@ -788,25 +796,31 @@ startTimerBtn.addEventListener('click', handleCountdownRequest);
 if (stageBackBtn) stageBackBtn.addEventListener('click', () => {
   isWaitingForRotation = false;
   countdownRunning = false;
+  unlockOrientation();
   setView('lobby');
 });
 if (skipBtn) skipBtn.addEventListener('click', handleSkipAction);
 if (correctBtn) correctBtn.addEventListener('click', handleCorrectAction);
 
 changeModeBtn.addEventListener('click', () => {
+  unlockOrientation();
   setView('lobby');
-  playerSelect.value = ""; 
-  guestNameInput.value = ""; 
-  guestNameInput.classList.add('hidden'); 
+  playerSelect.value = "";
+  guestNameInput.value = "";
+  guestNameInput.classList.add('hidden');
 });
 
 viewLeaderboardBtn.addEventListener('click', renderLeaderboard);
 backToLobbyBtn.addEventListener('click', () => {
+  unlockOrientation();
   setView('lobby');
-  playerSelect.value = ""; 
-  guestNameInput.value = ""; 
-  guestNameInput.classList.add('hidden'); 
+  playerSelect.value = "";
+  guestNameInput.value = "";
+  guestNameInput.classList.add('hidden');
 });
+
+// If the page is closed or backgrounded mid-round, drop the lock too
+window.addEventListener('pagehide', unlockOrientation);
 
 filterCategory.addEventListener('change', filterLeaderboardList);
 filterPlayer.addEventListener('change', filterLeaderboardList);
