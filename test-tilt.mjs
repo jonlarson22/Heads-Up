@@ -35,7 +35,7 @@ const factory = new Function(
      setActive: (v) => { isGameActive = v; },
      getCounts: () => ({ correct: correctCount, skip: skipCount }),
      resetCounts: () => { correctCount = 0; skipCount = 0; },
-     resetEngine: () => { baselineGx = null; baselineGz = null; tiltArmed = true; lastTiltAt = 0; },
+     resetEngine: () => { baselineGx = null; baselineGz = null; tiltArmed = true; lastTiltAt = 0; neutralSince = null; },
    };`
 );
 const T = factory(windowStub, performanceStub, undefined);
@@ -144,6 +144,49 @@ settle(-G, 0, 100);
 {
   const c = T.getCounts();
   check('shallow nod does not trigger', c.correct === 0 && c.skip === 0, JSON.stringify(c));
+}
+
+// Rotation-consistent emitter: theta in degrees, + = nod down (facing east,
+// gx = -G). Unlike the ramp helpers above, gx/gz trade off as a real
+// rotation, keeping |g| constant.
+function emitAngle(thetaDeg) {
+  const t = thetaDeg * Math.PI / 180;
+  emit(-G * Math.cos(t), 0, G * Math.sin(t));
+}
+function sweep(a, b, n) { for (let i = 1; i <= n; i++) emitAngle(a + ((b - a) * i) / n); }
+function holdAngle(thetaDeg, n) { for (let i = 0; i < n; i++) emitAngle(thetaDeg); }
+
+// ---- Scenario 7: recoil overshoot must not fire the opposite action ----
+// Player report: "sometimes it skips more than 1 when you change words."
+// A vigorous nod-down recoils THROUGH neutral and past the opposite
+// trigger. The old engine re-armed on a single sample inside the neutral
+// band, so the recoil fired a second word. Dwell + lockout must eat it.
+freshRound();
+settle(-G, 0);                       // baseline at theta = 0
+sweep(0, 45, 20);                    // nod down -> correct
+sweep(45, -40, 10);                  // fast recoil across neutral to -40deg
+holdAngle(-40, 40);                  // hold the overshoot ~0.64s (past lockout)
+{
+  const c = T.getCounts();
+  check('recoil overshoot fires no second word', c.correct === 1 && c.skip === 0, JSON.stringify(c));
+}
+holdAngle(0, 200);                   // genuinely settle at neutral -> re-arm
+sweep(0, -45, 20);                   // deliberate nod up
+{
+  const c = T.getCounts();
+  check('after settling, deliberate nod-up fires one skip', c.correct === 1 && c.skip === 1, JSON.stringify(c));
+}
+
+// ---- Scenario 8: jitter dip + same-direction re-spike must not double-fire ----
+freshRound();
+settle(-G, 0);
+sweep(0, 45, 20);                    // nod down -> correct
+sweep(45, 0, 3);                     // ~50ms dip back to neutral (jitter)
+sweep(0, 50, 8);                     // spike back past the trigger, same direction
+holdAngle(50, 20);                   // hold briefly
+{
+  const c = T.getCounts();
+  check('jitter dip + re-spike does not double-fire', c.correct === 1 && c.skip === 0, JSON.stringify(c));
 }
 
 console.log(failures === 0 ? '\nALL TILT TESTS PASSED' : `\n${failures} TEST(S) FAILED`);

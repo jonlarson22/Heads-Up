@@ -18,7 +18,9 @@ let isGuestPlayer = false;
 const ROUND_DURATION = 60;
 let timeLeft = 60;
 let currentScore = 0;
-let currentSkips = 0; 
+let currentSkips = 0;
+let currentWord = null; // word currently on the card (not yet answered)
+let roundHistory = [];  // [{ word, result: 'correct' | 'pass' }] in play order
 let timerInterval = null;
 let isWaitingForRotation = false;
 let countdownRunning = false; // guards against double-tap starting two timers
@@ -47,8 +49,9 @@ const categorySelect = document.getElementById('categorySelect');
 const startBtn = document.getElementById('startBtn');
 const viewLeaderboardBtn = document.getElementById('viewLeaderboardBtn');
 
-const scoreValue = document.getElementById('scoreValue'); 
+const scoreValue = document.getElementById('scoreValue');
 const cardContent = document.getElementById('cardContent');
+const flashcardEl = document.getElementById('flashcard');
 const progressBar = document.getElementById('progressBar');
 const controlsPreStart = document.getElementById('controlsPreStart');
 const controlsActive = document.getElementById('controlsActive');
@@ -60,6 +63,7 @@ const correctBtn = document.getElementById('correctBtn');
 const recapPlayerName = document.getElementById('recapPlayerName');
 const recapScoreValue = document.getElementById('recapScoreValue');
 const recapPassStats = document.getElementById('recapPassStats');
+const recapWords = document.getElementById('recapWords');
 const playAgainBtn = document.getElementById('playAgainBtn');
 const changeModeBtn = document.getElementById('changeModeBtn');
 
@@ -119,7 +123,8 @@ function drawNextCard() {
     shuffleArray(shuffledBag);
   }
   const nextWord = shuffledBag.pop();
-  
+  currentWord = nextWord;
+
   // 1. Calculate dynamic font size based on character count
   let fontSize = "3.8rem"; // Default for short titles (e.g., "Frozen", "Up")
   
@@ -137,15 +142,79 @@ function drawNextCard() {
   `;
 }
 
+// ==========================================
+// 5b. ACTION FEEDBACK (haptics / sound / flash)
+// The holder can't see the screen, so every score/pass needs feedback on
+// another channel. iOS Safari has NO Vibration API, so buzz alone leaves
+// iPhone holders with nothing — hence also distinct sounds (WebAudio
+// synth, no files to cache) and a card flash the clue-givers can see.
+// ==========================================
+function buzz(pattern) {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
+  } catch (e) { /* unsupported */ }
+}
+
+let audioCtx = null;
+function ensureAudio() {
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { /* audio unavailable */ }
+}
+
+function tone(freq, delaySec, durSec, type = 'sine', peak = 0.18) {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime + delaySec;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + durSec);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + durSec + 0.05);
+  } catch (e) { /* ignore */ }
+}
+
+// Bright rising ding = correct; softer falling tones = pass
+function playCorrectSound() { tone(880, 0, 0.12); tone(1318.5, 0.09, 0.18); }
+function playPassSound() { tone(392, 0, 0.12, 'triangle', 0.15); tone(261.6, 0.09, 0.2, 'triangle', 0.15); }
+
+let flashTimeout = null;
+function flashCard(kind) {
+  if (!flashcardEl) return;
+  flashcardEl.classList.remove('flash-correct', 'flash-pass');
+  void flashcardEl.offsetWidth; // restart the flash on rapid repeats
+  flashcardEl.classList.add(kind === 'correct' ? 'flash-correct' : 'flash-pass');
+  clearTimeout(flashTimeout);
+  flashTimeout = setTimeout(() => flashcardEl.classList.remove('flash-correct', 'flash-pass'), 300);
+}
+
 // Abstracted actions for buttons and tilt to share
 function handleSkipAction() {
+  if (currentWord !== null) roundHistory.push({ word: currentWord, result: 'pass' });
   currentSkips++;
+  buzz([70, 60, 70]); // double-buzz (Android; iOS ignores)
+  playPassSound();
+  flashCard('pass');
   drawNextCard();
 }
 
 function handleCorrectAction() {
+  if (currentWord !== null) roundHistory.push({ word: currentWord, result: 'correct' });
   currentScore++;
   if (scoreValue) scoreValue.textContent = currentScore;
+  buzz(90); // one solid buzz (Android; iOS ignores)
+  playCorrectSound();
+  flashCard('correct');
   drawNextCard();
 }
 
@@ -186,11 +255,14 @@ function initStage() {
   baselineGz = null;
   tiltArmed = true;
   lastTiltAt = 0;
+  neutralSince = null;
   
   progressBar.style.width = '100%';
   progressBar.classList.remove('warning');
   currentScore = 0;
   currentSkips = 0;
+  currentWord = null;
+  roundHistory = [];
   
   if (scoreValue) scoreValue.textContent = '0';
   
@@ -202,6 +274,7 @@ function initStage() {
 }
 
 function handleCountdownRequest() {
+  ensureAudio(); // user gesture: unlock WebAudio for the feedback sounds
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
   }
@@ -273,9 +346,10 @@ function startActiveTimer() {
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       isGameActive = false; // Disable tilt controls
-      progressBar.style.width = '0%'; 
+      progressBar.style.width = '0%';
       playSound(finalBuzzer);
-      
+      buzz([150, 80, 150]); // long double-buzz: round over (Android)
+
       setTimeout(() => triggerRecap(), 1000);
     }
   }, 1000);
@@ -289,6 +363,7 @@ function triggerRecap() {
   recapPlayerName.textContent = `${currentPlayerName}'s Round`;
   recapScoreValue.textContent = currentScore;
   recapPassStats.textContent = `${currentScore} Correct • ${currentSkips} Skips`;
+  renderRecapWords();
 
   const saveNameBtn = document.getElementById('saveNameBtn');
   if (saveNameBtn) {
@@ -313,6 +388,29 @@ function triggerRecap() {
   });
 
   setView('recap');
+}
+
+// End-of-round word list: every answered word, grouped Correct / Passed,
+// each group in the order the words were played. The word still on the
+// card when time expired was never answered, so it isn't listed.
+function renderRecapWords() {
+  if (!recapWords) return;
+  if (roundHistory.length === 0) {
+    recapWords.classList.add('hidden');
+    recapWords.innerHTML = '';
+    return;
+  }
+  const group = (title, cls, items) => `
+    <div class="words-group">
+      <h4 class="${cls}">${title} (${items.length})</h4>
+      <ul>${items.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+    </div>`;
+  const correct = roundHistory.filter(r => r.result === 'correct').map(r => r.word);
+  const passed = roundHistory.filter(r => r.result === 'pass').map(r => r.word);
+  recapWords.innerHTML = `<h3>Words this round</h3>`
+    + (correct.length ? group('✓ Got it', 'words-correct', correct) : '')
+    + (passed.length ? group('↷ Passed', 'words-pass', passed) : '');
+  recapWords.classList.remove('hidden');
 }
 
 const SCORE_OUTBOX_KEY = 'score_outbox';
@@ -578,19 +676,22 @@ async function loadPlayersFromFirebase() {
 // the baseline gx sign so "down" is correct no matter which way the
 // player faces or which landscape direction the phone is in.
 // ==========================================
-const TILT_TRIGGER = 0.45;   // nod depth (fraction of g) that scores
+const TILT_TRIGGER = 0.45;    // nod depth (fraction of g) that scores
 const TILT_REARM = 0.22;      // must return this close to baseline to re-arm
-const TILT_DEBOUNCE_MS = 350;
-const VERTICAL_MIN = 0.45;   // |gx|/g must exceed this (phone roughly upright)
+const TILT_LOCKOUT_MS = 900;  // no new score at all for this long after one fires
+const NEUTRAL_DWELL_MS = 250; // must STAY near neutral this long to re-arm
+const VERTICAL_MIN = 0.45;    // |gx|/g must exceed this (phone roughly upright)
 
 let motionListenerAttached = false;
 let baselineGx = null;
 let baselineGz = null;
 let tiltArmed = true;
 let lastTiltAt = 0;
+let neutralSince = null; // when the phone entered the neutral band (null = not in band)
 
 function requestMotionPermission(callback) {
   const done = () => {
+    ensureAudio(); // we're inside the Start tap: unlock WebAudio too
     attachMotionListener();
     callback();
   };
@@ -615,14 +716,6 @@ function attachMotionListener() {
   if (motionListenerAttached) return; // attach once; isGameActive gates scoring
   motionListenerAttached = true;
   window.addEventListener('devicemotion', handleMotion);
-}
-
-// Haptic nudge so the holder knows their tilt registered (they can't see
-// the screen). Android only; iPhones silently ignore vibrate().
-function buzz(pattern) {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern);
-  } catch (e) { /* unsupported */ }
 }
 
 function handleMotion(event) {
@@ -655,16 +748,30 @@ function handleMotion(event) {
   if (tiltArmed
       && Math.abs(dz) > TILT_TRIGGER
       && Math.abs(gx) / gEst > VERTICAL_MIN
-      && now - lastTiltAt > TILT_DEBOUNCE_MS) {
+      && now - lastTiltAt > TILT_LOCKOUT_MS) {
     // Nod-down swings gz opposite to the baseline gx side.
     const isDown = dz * baselineGx < 0;
     tiltArmed = false;
+    neutralSince = null;
     lastTiltAt = now;
-    buzz(isDown ? 25 : [30, 50, 30]);
     if (isDown) handleCorrectAction();
     else handleSkipAction();
-  } else if (!tiltArmed && Math.abs(dz) < TILT_REARM) {
-    tiltArmed = true;
+  } else if (!tiltArmed) {
+    // Re-arm only once the gesture has genuinely settled: the phone must
+    // stay inside the neutral band continuously for NEUTRAL_DWELL_MS and
+    // the post-score lockout must have expired. The old logic re-armed on
+    // a single sample crossing neutral, so the recoil of one nod (or a
+    // jitter spike while walking) could fire a second word — players
+    // reported rounds skipping 2 words per tilt.
+    if (Math.abs(dz) < TILT_REARM) {
+      if (neutralSince === null) neutralSince = now;
+      if (now - neutralSince >= NEUTRAL_DWELL_MS && now - lastTiltAt >= TILT_LOCKOUT_MS) {
+        tiltArmed = true;
+        neutralSince = null;
+      }
+    } else {
+      neutralSince = null;
+    }
   }
 }
 
