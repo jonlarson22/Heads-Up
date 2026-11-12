@@ -88,19 +88,25 @@ body {
 .card-stage { flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 0; }
 
 .flashcard {
-  flex: 1; 
-  width: 100%; 
-  height: 100%; 
-  background: var(--card-bg); 
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background: var(--card-bg);
   border-radius: 28px;
-  border: 8px solid var(--secondary); 
-  box-shadow: 0 12px 30px rgba(255, 190, 11, 0.2); 
-  padding: 16px; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
+  border: 8px solid var(--secondary);
+  box-shadow: 0 12px 30px rgba(255, 190, 11, 0.2);
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
+
+/* Per-action card flash: clue-givers see the score/pass register even
+   though the holder can't (pairs with the feedback sounds) */
+.flashcard.flash-correct { background: #D9FBEF; border-color: #06D6A0; }
+.flashcard.flash-pass { background: #FFE3EE; border-color: var(--accent); }
 
 /* Kill default browser margins that secretly push the card open */
 .game-word { 
@@ -155,6 +161,27 @@ body {
 .recap-box h2 { font-size: 2.5rem; color: var(--text-main); margin-bottom: 16px; font-weight: 900; }
 .recap-score p { color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
 .recap-score span { font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1; }
+
+/* --- RECAP WORD LIST --- */
+.recap-words {
+  width: 100%;
+  max-height: 36%;
+  overflow-y: auto;
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  padding: 14px 18px;
+  margin-top: 12px;
+  text-align: left;
+}
+.recap-words h3 { font-size: 1.05rem; font-weight: 900; color: var(--text-main); margin-bottom: 6px; }
+.words-group { margin-top: 8px; }
+.words-group h4 { font-size: 0.95rem; font-weight: 800; margin-bottom: 2px; }
+.words-group h4.words-correct { color: #04A67B; }
+.words-group h4.words-pass { color: var(--accent); }
+.words-group ul { list-style: none; }
+.words-group li { padding: 5px 2px; font-weight: 700; color: var(--text-main); border-bottom: 1px solid #EEF1F4; }
+.words-group li:last-child { border-bottom: none; }
 
 /* ==========================================
    LANDSCAPE STAGE & EDGE TIMER (LOCKED BOX)
